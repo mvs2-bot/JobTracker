@@ -226,12 +226,7 @@
     .field::placeholder, .f input::placeholder { color: color-mix(in srgb, var(--mute) 60%, transparent); }
     .note { font-size: 12px; color: var(--mute); margin-top: 8px; }
     .note .ic { width: 14px; height: 14px; vertical-align: -2px; }
-    details.fold > summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; }
-    details.fold > summary::-webkit-details-marker { display: none; }
-    details.fold > summary .chev { width: 16px; height: 16px; color: var(--mute); transition: transform .2s; }
-    details.fold[open] > summary .chev { transform: rotate(90deg); }
-    details.fold > summary small { font-size: 12px; color: var(--mute); font-weight: 500; }
-    details.fold .fold-body { margin-top: 10px; }
+    .field.posting { max-height: 50vh; overflow-y: auto; }
 
     /* Fristen */
     .task { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 0; }
@@ -663,7 +658,7 @@
                 <template x-for="e in eventsOf(a.id)" :key="e.id">
                   <div class="ev">
                     <span class="what" x-text="ST[e.status]?.label"></span>
-                    <input type="date" :value="e.changed_on" @change="if ($event.target.value) { e.changed_on = $event.target.value; saveEvent(e) }" :disabled="e._local" aria-label="Datum">
+                    <input type="date" :value="e.changed_on" @change="if ($event.target.value) { e.changed_on = $event.target.value; saveEvent(e) }" :disabled="e._local === true" aria-label="Datum">
                   </div>
                 </template>
               </div>
@@ -691,13 +686,10 @@
             </div>
 
             <div class="card">
-              <details class="fold" :open="!a.posting_text">
-                <summary><h3>Stellenanzeige</h3><small x-text="a._noPosting ? 'offline nicht geladen' : a.posting_text ? Math.round(a.posting_text.length / 100) / 10 + ' k Zeichen gesichert' : 'noch nicht gesichert'"></small><svg class="ic chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary>
-                <div class="fold-body">
-                  <div class="area"><textarea class="field" rows="4" maxlength="100000" x-model="a.posting_text" x-effect="a.posting_text; $el.closest('details').open && grow($el)" @input="queueSave(a); grow($el)" :disabled="a._noPosting"
-                    placeholder="Text der Anzeige hier einfügen. Anzeigen gehen oft offline."></textarea></div>
-                </div>
-              </details>
+              <div class="sec-head"><h3>Stellenanzeige</h3><small class="note" style="margin:0" x-text="a._noPosting === true ? 'offline nicht geladen' : a.posting_text ? Math.round(a.posting_text.length / 100) / 10 + ' k Zeichen gesichert' : 'noch nicht gesichert'"></small></div>
+              <!-- === true: Alpine lässt disabled bei undefined gesetzt -->
+              <div class="area"><textarea class="field posting" rows="4" maxlength="100000" x-model="a.posting_text" x-effect="a.posting_text; grow($el)" @input="queueSave(a)" :disabled="a._noPosting === true"
+                placeholder="Text der Anzeige hier einfügen. Anzeigen gehen oft offline."></textarea></div>
             </div>
 
             <div class="card">

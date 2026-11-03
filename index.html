@@ -1,1 +1,1227 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Job Tracker</title>
+  <meta name="description" content="Job Tracker – Bewerbungen, Status, Fristen und Stellenanzeigen an einem Ort.">
+  <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Job Tracker">
 
+  <!-- Dark Mode vor dem ersten Rendern setzen, damit nichts aufblitzt -->
+  <script>
+    function grow(el) { el.style.height = 'auto'; if (el.scrollHeight) el.style.height = el.scrollHeight + 'px'; }
+    try {
+      // 'overall-theme' teilen sich alle Apps auf mvs2-bot.github.io
+      const t = localStorage.getItem('overall-theme');
+      if (t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.classList.add('dark');
+    } catch (_) {}
+  </script>
+
+  <style>
+    /* Job Tracker – Designsprache der mvs2-Familie (TravelBase, MigraLog):
+       Systemschrift, weiße Karten auf Grau, Linien-Symbole, iOS-Segmente.
+       Akzent Petrol, Status: grau (Merken/Zurückgezogen), Akzent (laufend), Grün (Angebot/Zusage), Rot (Absage). */
+    :root {
+      --bg: #f2f2f7; --card: #fff; --well: #f2f2f7; --hover: #e9e9ef; --line: #e2e2e7; --sep: rgba(60, 60, 67, .14);
+      --ink: #1c1c1e; --text: #3a3a3c; --mute: #6c6c70;
+      --p1: #0b6e79; --p1-soft: #e3f2f4; --on-p1: #fff;
+      --ok: #248a3d; --ok-soft: #e4f4e8; --warn: #b25000; --warn-soft: #fdf0e3; --danger: #d70015; --danger-soft: #ffe6e8;
+      --radius: 18px; --radius-s: 12px; --shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 4px 14px rgba(0, 0, 0, .04);
+      --pop: 0 12px 40px rgba(0, 0, 0, .18), 0 0 0 .5px rgba(0, 0, 0, .06);
+      --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", system-ui, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      /* Namen, die ios-nav.js erwartet */
+      --border: var(--line); --accent: var(--p1); --card-hover: var(--hover); --muted: var(--mute);
+      color-scheme: light;
+    }
+    .dark {
+      color-scheme: dark; --bg: #000; --card: #1c1c1e; --well: #2c2c2e; --hover: #3a3a3c; --line: #38383a; --sep: rgba(84, 84, 88, .55);
+      --ink: #f5f5f7; --text: #d1d1d6; --mute: #98989f;
+      --p1: #5cc8d4; --p1-soft: #0f2a2e; --on-p1: #062a2f;
+      --ok: #30d158; --ok-soft: #12291a; --warn: #ffb340; --warn-soft: #33240b; --danger: #ff6961; --danger-soft: #3a1412;
+      --shadow: none; --pop: 0 16px 48px rgba(0, 0, 0, .6), 0 0 0 .5px rgba(255, 255, 255, .08);
+    }
+    [x-cloak], [hidden] { display: none !important; }
+    * { box-sizing: border-box; }
+    html { background: var(--bg); -webkit-text-size-adjust: 100%; }
+    body { margin: 0; min-height: 100vh; font-family: var(--font); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.45; letter-spacing: -.005em;
+      -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
+    body.locked { overflow: hidden; }
+    ::selection { background: color-mix(in srgb, var(--p1) 28%, transparent); color: var(--ink); }
+    button, input, textarea, select { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: default; }
+    :focus-visible { outline: 2px solid var(--p1); outline-offset: 2px; }
+    h1, h2, h3, h4, p { margin: 0; }
+    a { color: var(--p1); }
+    .ic { width: 1.25em; height: 1.25em; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .wrap { max-width: 640px; margin: 0 auto; padding: 0 max(16px, env(safe-area-inset-right, 0px)) calc(40px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+
+    /* ---------------- Kopf ---------------- */
+    header { position: sticky; top: 0; z-index: 20; padding-top: env(safe-area-inset-top, 0px);
+      background: color-mix(in srgb, var(--bg) 82%, transparent); -webkit-backdrop-filter: saturate(1.8) blur(18px); backdrop-filter: saturate(1.8) blur(18px); }
+    header .wrap { padding-bottom: 0; }
+    .bar { display: flex; align-items: center; gap: 12px; padding-block: 12px 10px; }
+    .bar .logo { width: 36px; height: 36px; flex: none; border-radius: 9px; }
+    .bar .head { flex: 1; min-width: 0; }
+    h1 { font-size: 22px; font-weight: 700; color: var(--ink); line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sub { font-size: 12px; font-weight: 500; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .acts { display: flex; gap: 8px; flex: none; align-items: center; }
+    .icon-btn { position: relative; overflow: hidden; width: 36px; height: 36px; border: 0; border-radius: 50%; background: var(--card); color: var(--ink); box-shadow: var(--shadow);
+      display: inline-grid; place-items: center; padding: 0; transition: background .15s; flex: none; }
+    .icon-btn:hover { background: var(--hover); }
+    .icon-btn .ic { width: 18px; height: 18px; }
+    .icon-btn img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+    .icon-btn.add { background: var(--p1); color: var(--on-p1); }
+    .icon-btn.add:hover { filter: brightness(1.06); }
+    .me .sync-dot { position: absolute; right: -1px; bottom: -1px; width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--bg); background: var(--ok); pointer-events: none; }
+    .sync-dot.pending { background: var(--warn); } .sync-dot.error { background: var(--danger); }
+    .seg.nav-top { display: none; }
+
+    /* Kontomenü (wie MigraLog) */
+    .me { position: relative; }
+    .pm-menu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 30; width: 290px; max-width: calc(100vw - 32px); padding: 6px; color: var(--text); border-radius: 14px; box-shadow: var(--pop); background: var(--card); }
+    .pm-head { display: flex; gap: 10px; align-items: center; padding: 8px 10px 10px; min-width: 0; }
+    .pm-head > div { min-width: 0; }
+    .pm-head b { display: block; font-size: 14px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pm-head small { display: block; font-size: 12px; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pm-ava { flex: 0 0 40px; width: 40px; height: 40px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; color: #fff; font-size: 14px; font-weight: 600; }
+    .pm-ava img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .pm-sync { display: flex; align-items: center; gap: 8px; margin: 0 4px 6px; padding: 8px 10px; border-radius: 10px; background: var(--well); font-size: 12px; color: var(--text); }
+    .pm-sync i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none; }
+    .pm-sync i.pending { background: var(--warn); } .pm-sync i.error { background: var(--danger); }
+    .pm-sync b { font-weight: 600; color: var(--ink); }
+    .pm-role { display: inline-block; margin-top: 3px; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 600; background: var(--p1-soft); color: var(--p1); }
+    .pm-item { display: flex; width: 100%; align-items: center; gap: 10px; min-height: 40px; padding: 8px 10px; border: 0; border-radius: 8px;
+      background: none; color: var(--ink); font-size: 14px; font-weight: 500; text-align: left; text-decoration: none; }
+    .pm-item .ic { width: 18px; height: 18px; color: var(--mute); }
+    .pm-item:hover, .pm-item:focus-visible { background: var(--hover); outline: none; }
+    .pm-item small { margin-left: auto; font-size: 11px; color: var(--mute); white-space: nowrap; }
+    .pm-item.danger, .pm-item.danger .ic { color: var(--danger); }
+    .pm-sep { height: 1px; margin: 4px 6px; background: var(--sep); }
+
+    /* Segmente wie in iOS */
+    .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: color-mix(in srgb, var(--mute) 14%, transparent); border-radius: 9px; padding: 2px; gap: 2px; }
+    .seg button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 0; background: none; border-radius: 7px; padding: 6px 10px; min-height: 32px;
+      font-size: 13px; font-weight: 500; color: var(--ink); transition: background .15s; white-space: nowrap; min-width: 0; }
+    .seg button .ic { width: 16px; height: 16px; }
+    .seg button[aria-pressed="true"] { background: var(--card); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); font-weight: 600; }
+    .dark .seg button[aria-pressed="true"] { background: #636366; }
+    .seg .n { font-size: 11px; font-weight: 700; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--warn); color: #fff; display: inline-grid; place-items: center; }
+    .dark .seg .n { color: #1c1c1e; }
+    .tabs { margin: 8px 0 16px; }
+
+    /* ---------------- Karten ---------------- */
+    .card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; min-width: 0; }
+    .card h3 { font-size: 17px; font-weight: 600; color: var(--ink); line-height: 1.3; }
+    .sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+    .sec-head h3 { font-size: 15px; }
+    .stack { display: grid; gap: 14px; }
+    .link { display: inline-block; padding: 2px 0; border: 0; background: none; font-size: 13px; font-weight: 600; color: var(--p1); text-decoration: none; }
+    .link:hover { text-decoration: underline; text-underline-offset: 3px; }
+    .empty { padding: 28px 16px; text-align: center; font-size: 13px; color: var(--mute); }
+    .empty .btn { margin-top: 12px; }
+    .group-label { margin: 16px 4px 8px; font-size: 13px; font-weight: 600; color: var(--mute); }
+    .group-label.late { color: var(--danger); }
+
+    /* Kennzahlen */
+    .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .stat { display: flex; flex-direction: column; gap: 2px; padding: 14px; }
+    .stat span { font-size: 12px; font-weight: 600; color: var(--mute); }
+    .stat b { font-size: 26px; font-weight: 700; color: var(--ink); line-height: 1.15; font-variant-numeric: tabular-nums; }
+    .stat b small { font-size: 14px; font-weight: 500; color: var(--mute); }
+    .stat p { font-size: 12px; color: var(--mute); }
+    .stat.wide { grid-column: 1 / -1; }
+
+    /* Listen */
+    .list { padding: 0; overflow: hidden; }
+    .row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 10px 16px; border: 0; background: none; text-align: left; color: var(--text); transition: background .15s; }
+    .row + .row { border-top: 1px solid var(--sep); }
+    button.row:hover, .row.sel { background: color-mix(in srgb, var(--card) 70%, var(--hover)); }
+    .row.sel { box-shadow: inset 3px 0 0 var(--p1); }
+    .row .txt { flex: 1; min-width: 0; }
+    .row .t1 { display: block; font-size: 15px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .row .t2 { display: block; font-size: 13px; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+    .row .side { flex: none; display: grid; justify-items: end; gap: 4px; }
+    .row .due { font-size: 12px; color: var(--mute); font-variant-numeric: tabular-nums; }
+    .row .due.late { color: var(--danger); font-weight: 600; } .row .due.today { color: var(--warn); font-weight: 600; }
+    .co { flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 15px; font-weight: 700; background: var(--p1-soft); color: var(--p1); }
+
+    /* Status-Chips */
+    .tag { display: inline-flex; align-items: center; min-height: 22px; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap;
+      background: var(--well); color: var(--mute); }
+    .tag.s-run { background: var(--p1-soft); color: var(--p1); }
+    .tag.s-talk { background: var(--p1); color: var(--on-p1); }
+    .tag.s-ok { background: var(--ok-soft); color: var(--ok); }
+    .tag.s-no { background: var(--danger-soft); color: var(--danger); }
+
+    /* Werkzeugleiste der Liste */
+    .tools { display: grid; gap: 10px; margin-bottom: 12px; }
+    .search { display: flex; align-items: center; gap: 8px; padding: 0 12px; min-height: 40px; border-radius: 10px; background: color-mix(in srgb, var(--mute) 12%, transparent); color: var(--mute); }
+    .search input { flex: 1; min-width: 0; border: 0; background: none; outline: none; font-size: 16px; color: var(--ink); padding: 8px 0; }
+    .chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
+    .chips::-webkit-scrollbar { display: none; }
+    .chip { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 6px 12px; border: 0; border-radius: 999px; background: var(--card); box-shadow: var(--shadow); color: var(--ink);
+      font-size: 13px; font-weight: 500; transition: background .15s, color .15s; }
+    .chip:hover { background: var(--hover); }
+    .chip[aria-pressed="true"] { background: var(--p1); color: var(--on-p1); font-weight: 600; }
+    .chip small { font-size: 11px; opacity: .7; }
+    .tools-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--mute); cursor: pointer; }
+    .toggle input { width: 18px; height: 18px; accent-color: var(--p1); margin: 0; }
+    .seg.view-mode { display: none; }
+
+    /* Spaltenansicht (nur Desktop) */
+    .board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(220px, 1fr); gap: 14px; overflow-x: auto; padding-bottom: 8px; align-items: start; }
+    .col { background: color-mix(in srgb, var(--mute) 9%, transparent); border-radius: var(--radius); padding: 10px; display: grid; gap: 8px; }
+    .col h4 { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: var(--mute); padding: 2px 6px; }
+    .bcard { display: grid; gap: 4px; padding: 12px; border: 0; border-radius: var(--radius-s); background: var(--card); box-shadow: var(--shadow); text-align: left; color: var(--text); }
+    .bcard:hover { background: var(--hover); }
+    .bcard b { font-size: 14px; color: var(--ink); }
+    .bcard small { font-size: 12px; color: var(--mute); }
+
+    /* ---------------- Detail ---------------- */
+    .detail { min-width: 0; }
+    .detail.float { position: fixed; inset: 0; z-index: 40; overflow-y: auto; overscroll-behavior: contain; background: var(--bg);
+      padding: env(safe-area-inset-top, 0px) max(16px, env(safe-area-inset-right, 0px)) calc(40px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+    .d-bar { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 10px; padding: 12px 0 10px; background: color-mix(in srgb, var(--bg) 88%, transparent);
+      -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
+    .detail:not(.float) .d-bar { display: none; }
+    .d-bar .back { display: inline-flex; align-items: center; gap: 2px; border: 0; background: none; color: var(--p1); font-size: 16px; font-weight: 500; padding: 6px 0; }
+    .d-bar .back .ic { width: 22px; height: 22px; }
+    .d-bar .st { flex: 1; text-align: right; font-size: 12px; color: var(--mute); }
+    .d-inner { max-width: 640px; margin: 0 auto; display: grid; gap: 14px; }
+    .d-head .company { width: 100%; border: 0; background: none; outline: none; font-size: 24px; font-weight: 700; color: var(--ink); padding: 0; }
+    .d-head .position { width: 100%; border: 0; background: none; outline: none; font-size: 16px; font-weight: 500; color: var(--text); padding: 2px 0 0; }
+    .d-head input::placeholder { color: color-mix(in srgb, var(--mute) 60%, transparent); }
+    .d-head .need { margin-top: 6px; font-size: 12px; color: var(--warn); }
+    .status-pick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+    .status-pick button { min-height: 34px; padding: 6px 12px; border: 0; border-radius: 999px; background: var(--well); color: var(--ink); font-size: 13px; font-weight: 500; }
+    .status-pick button:hover { background: var(--hover); }
+    .status-pick button[aria-pressed="true"] { background: var(--p1); color: var(--on-p1); font-weight: 600; }
+    .status-pick button.s-ok[aria-pressed="true"] { background: var(--ok); color: #fff; }
+    .status-pick button.s-no[aria-pressed="true"] { background: var(--danger); color: #fff; }
+    .dark .status-pick button.s-ok[aria-pressed="true"], .dark .status-pick button.s-no[aria-pressed="true"] { color: #1c1c1e; }
+
+    /* Formular als iOS-Liste */
+    .form { border-radius: var(--radius-s); background: var(--well); }
+    .f { display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 4px 12px; }
+    .f + .f { border-top: 1px solid var(--sep); }
+    .f > span { flex: 0 0 104px; font-size: 13px; font-weight: 500; color: var(--mute); }
+    .f input, .f select { flex: 1; min-width: 0; border: 0; background: none; outline: none; font-size: 16px; color: var(--ink); padding: 8px 0; }
+    .f select { appearance: none; -webkit-appearance: none; }
+    .f a.go { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--p1-soft); color: var(--p1); }
+    .f a.go .ic { width: 16px; height: 16px; }
+    .f:focus-within { box-shadow: inset 0 0 0 1.5px var(--p1); border-radius: var(--radius-s); }
+    .area { padding: 2px 12px; border-radius: var(--radius-s); background: var(--well); }
+    .area:focus-within { box-shadow: inset 0 0 0 1.5px var(--p1); }
+    .field { width: 100%; min-width: 0; padding: 11px 0; border: 0; background: none; outline: none; font-size: 16px; color: var(--ink); line-height: 1.45; resize: none; display: block; }
+    .field::placeholder, .f input::placeholder { color: color-mix(in srgb, var(--mute) 60%, transparent); }
+    .note { font-size: 12px; color: var(--mute); margin-top: 8px; }
+    .note .ic { width: 14px; height: 14px; vertical-align: -2px; }
+    details.fold > summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; }
+    details.fold > summary::-webkit-details-marker { display: none; }
+    details.fold > summary .chev { width: 16px; height: 16px; color: var(--mute); transition: transform .2s; }
+    details.fold[open] > summary .chev { transform: rotate(90deg); }
+    details.fold > summary small { font-size: 12px; color: var(--mute); font-weight: 500; }
+    details.fold .fold-body { margin-top: 10px; }
+
+    /* Fristen */
+    .task { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 0; }
+    .task + .task { border-top: 1px solid var(--sep); }
+    .check { flex: none; width: 26px; height: 26px; border: 0; border-radius: 50%; box-shadow: inset 0 0 0 1.8px var(--line); background: none; display: grid; place-items: center; color: transparent; padding: 0; }
+    .check .ic { width: 15px; height: 15px; stroke-width: 2.6; }
+    .check[aria-pressed="true"] { background: var(--p1); box-shadow: none; color: var(--on-p1); }
+    .task .txt { flex: 1; min-width: 0; }
+    .task .t1 { display: block; font-size: 15px; color: var(--ink); overflow-wrap: anywhere; }
+    .task.done .t1 { text-decoration: line-through; color: var(--mute); }
+    .task .t2 { display: block; font-size: 12px; color: var(--mute); }
+    .task .t2.late { color: var(--danger); font-weight: 600; } .task .t2.today { color: var(--warn); font-weight: 600; }
+    .x { flex: none; width: 32px; height: 32px; border: 0; border-radius: 50%; background: none; color: var(--mute); display: grid; place-items: center; padding: 0; }
+    .x:hover { background: var(--hover); color: var(--danger); }
+    .x .ic { width: 16px; height: 16px; }
+    .add-task { display: grid; gap: 8px; margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--sep); }
+    .add-task .line { display: flex; gap: 8px; flex-wrap: wrap; }
+    .add-task input, .add-task select { min-height: 40px; padding: 6px 10px; border: 0; border-radius: 10px; background: var(--well); color: var(--ink); font-size: 16px; min-width: 0; }
+    .add-task input[type="text"] { flex: 1 1 100%; }
+    .add-task input[type="date"] { flex: 1 1 140px; } .add-task input[type="time"] { flex: 0 1 110px; }
+    .add-task select { flex: 1 1 140px; }
+    .add-task input:focus, .add-task select:focus { outline: 2px solid var(--p1); outline-offset: 0; }
+
+    /* Zeitleiste */
+    .tl { position: relative; display: grid; gap: 2px; padding-left: 18px; }
+    .tl::before { content: ""; position: absolute; left: 5px; top: 10px; bottom: 10px; width: 2px; border-radius: 1px; background: var(--line); }
+    .ev { position: relative; display: flex; align-items: center; gap: 10px; min-height: 40px; }
+    .ev::before { content: ""; position: absolute; left: -17px; width: 10px; height: 10px; border-radius: 50%; background: var(--card); box-shadow: inset 0 0 0 2px var(--p1); }
+    .ev:last-child::before { background: var(--p1); }
+    .ev .what { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: var(--ink); }
+    .ev input[type="date"] { border: 0; border-radius: 8px; background: var(--well); color: var(--text); font-size: 14px; padding: 4px 8px; min-height: 32px; }
+
+    .d-foot { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; }
+
+    /* Knöpfe */
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 7px 16px; font-size: 14px; font-weight: 600; border: 0; border-radius: 999px;
+      background: var(--p1); color: var(--on-p1); transition: filter .15s; text-decoration: none; }
+    .btn:hover { filter: brightness(1.06); }
+    .btn:disabled { opacity: .5; }
+    .btn .ic { width: 16px; height: 16px; }
+    .btn.wide { width: 100%; min-height: 44px; border-radius: 12px; font-size: 15px; }
+    .btn.ghost { background: var(--well); color: var(--ink); }
+    .card .btn.ghost { background: var(--well); }
+    .btn.small { min-height: 32px; padding: 5px 14px; font-size: 13px; }
+    .btn.red { background: var(--danger-soft); color: var(--danger); }
+
+    /* Neue Bewerbung */
+    .modal-bg { position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, .35); display: grid; align-items: end; justify-items: center; }
+    .modal { width: 100%; max-width: 520px; max-height: 92vh; overflow: auto; background: var(--bg); border-radius: 18px 18px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 12px; }
+    .modal h2 { font-size: 20px; font-weight: 700; color: var(--ink); }
+    .modal .btns { display: flex; gap: 10px; } .modal .btns .btn { flex: 1; min-height: 44px; }
+
+    .status { min-height: 18px; text-align: center; font-size: 12px; font-weight: 500; color: var(--mute); }
+    .status.err { color: var(--danger); }
+
+    /* Anmeldung */
+    .gate { max-width: 380px; margin: 8vh auto 0; }
+    .gate h2 { font-size: 22px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+    .gate p.lead { margin: 0 0 16px; font-size: 13px; color: var(--mute); }
+    .gate label { display: grid; gap: 4px; font-size: 12px; font-weight: 500; color: var(--mute); margin-bottom: 12px; }
+    .gate input { width: 100%; padding: 10px 12px; font-size: 16px; border: 0; border-radius: 10px; background: var(--well); color: var(--ink); }
+    .gate input:focus { outline: 2px solid var(--p1); outline-offset: 0; }
+    .gate .links { display: grid; justify-items: center; gap: 6px; margin-top: 12px; font-size: 12px; color: var(--mute); text-align: center; }
+    .msg { margin: 0 0 12px; padding: 10px 12px; border-radius: 10px; font-size: 13px; font-weight: 500; background: var(--danger-soft); color: var(--danger); }
+    .msg.ok { background: var(--p1-soft); color: var(--p1); }
+
+    .spin { width: 18px; height: 18px; margin: 80px auto; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--mute); animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .fade-enter { animation: fade .3s ease both; }
+    /* nur Deckkraft: ein transform würde die fixierte Detailansicht im Bereich einsperren */
+    @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+    /* ---------------- Desktop ab 1024 px: eigenes Layout ---------------- */
+    @media (min-width: 1024px) {
+      .wrap { max-width: 1200px; padding-inline: 32px; }
+      .bar { gap: 16px; padding-block: 14px 12px; }
+      .bar .logo { width: 40px; height: 40px; border-radius: 10px; }
+      .seg.nav-top { display: grid; width: 380px; margin-right: 8px; }
+      .nav-top button { min-height: 34px; }
+      .tabs { display: none; }
+      main { padding-top: 12px; }
+      .card { padding: 20px; }
+      .stats { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
+      .stat.wide { grid-column: auto; }
+      .stat { padding: 18px 20px; } .stat b { font-size: 30px; }
+      .home { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+      .home .stats { grid-column: 1 / -1; }
+      .split { display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 24px; align-items: start; }
+      .split > .detail:not(.float) { position: sticky; top: 84px; max-height: calc(100vh - 100px); overflow-y: auto; border-radius: var(--radius); }
+      .chips { margin: 0; padding: 0; flex-wrap: wrap; }
+      .seg.view-mode { display: inline-grid; }
+      .detail.float { left: auto; width: 560px; box-shadow: var(--pop); padding-inline: 24px; }
+      .soon { max-width: 760px; }
+      .modal-bg { align-items: center; }
+      .modal { border-radius: 18px; padding: 22px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } .spin { animation: spin 1.6s linear infinite !important; } }
+    @media (prefers-reduced-transparency: reduce) { header, .d-bar { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; } }
+  </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <script src="shared/ios-nav.js" defer></script>
+</head>
+
+<body x-data="jobTracker()" :class="{ locked: (sel && !wideList()) || newForm }">
+
+<script>
+  const SUPABASE_URL      = 'https://syaonnedmidaipwjjmio.supabase.co';  // Projekt "core"
+  const SUPABASE_ANON_KEY = 'sb_publishable_a3tggKZJmotlFtIqKKdSYg_cNsazRkX';  // öffentlicher Publishable Key
+  const APP_ID            = 'jobtracker';                             // Eintrag in public.overall_apps
+  const ACCOUNT_URL       = '/konto.html?from=jobtracker#app-jobtracker';
+  const ADMIN_URL         = '/admin.html?from=jobtracker';
+  const AVATAR_COLORS     = ['#0b6e79', '#4a7356', '#b25000', '#5856d6', '#0066cc', '#a2453a'];
+
+  // Linien-Symbole (gleiche Strichstärke wie Dashboard und MigraLog)
+  const svg = d => '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">' + d + '</svg>';
+  const IC = {
+    home:  svg('<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>'),
+    list:  svg('<path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/>'),
+    cal:   svg('<rect x="3" y="4.5" width="18" height="16.5" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/>'),
+    board: svg('<rect x="3" y="3.5" width="5" height="17" rx="1.5"/><rect x="10" y="3.5" width="5" height="11" rx="1.5"/><rect x="17" y="3.5" width="4" height="14" rx="1.5"/>'),
+    check: svg('<path d="m5 12.5 4.5 4.5L19 7.5"/>'),
+    x:     svg('<path d="M6 6l12 12M18 6 6 18"/>'),
+    ext:   svg('<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>'),
+    mail:  svg('<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m4 7 8 6 8-6"/>'),
+    phone: svg('<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>'),
+    key:   svg('<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M15 8l2 2"/>'),
+  };
+
+  // Status in Reihenfolge des Bewerbungsablaufs. kind: Farbe des Chips
+  const STATUSES = [
+    { id: 'saved',      label: 'Merken',                short: 'Gemerkt',     kind: '' },
+    { id: 'applied',    label: 'Beworben',              short: 'Beworben',    kind: 's-run' },
+    { id: 'confirmed',  label: 'Eingangsbestätigung',   short: 'Eingang',     kind: 's-run' },
+    { id: 'interview',  label: 'Gespräch',              short: 'Gespräch',    kind: 's-talk' },
+    { id: 'interview2', label: 'Zweitgespräch',         short: '2. Gespräch', kind: 's-talk' },
+    { id: 'offer',      label: 'Angebot',               short: 'Angebot',     kind: 's-ok' },
+    { id: 'accepted',   label: 'Zusage',                short: 'Zusage',      kind: 's-ok' },
+    { id: 'rejected',   label: 'Absage',                short: 'Absage',      kind: 's-no' },
+    { id: 'withdrawn',  label: 'Zurückgezogen',         short: 'Zurückgez.',  kind: '' },
+  ];
+  const ST = Object.fromEntries(STATUSES.map(s => [s.id, s]));
+  const CLOSED  = ['accepted', 'rejected', 'withdrawn'];
+  const RUNNING = ['applied', 'confirmed', 'interview', 'interview2', 'offer'];
+  // Als Antwort der Firma zählt alles nach „Beworben“ außer der automatischen Eingangsbestätigung
+  const ANSWERS = ['interview', 'interview2', 'offer', 'accepted', 'rejected'];
+  const FILTERS = [
+    { id: 'all',     label: 'Alle',          test: () => true },
+    { id: 'saved',   label: 'Gemerkt',       test: a => a.status === 'saved' },
+    { id: 'run',     label: 'Laufend',       test: a => ['applied', 'confirmed'].includes(a.status) },
+    { id: 'talk',    label: 'Gespräche',     test: a => ['interview', 'interview2'].includes(a.status) },
+    { id: 'offer',   label: 'Angebot/Zusage', test: a => ['offer', 'accepted'].includes(a.status) },
+    { id: 'closed',  label: 'Absage/Zurückgezogen', test: a => ['rejected', 'withdrawn'].includes(a.status) },
+  ];
+  const COLUMNS = [
+    { label: 'Gemerkt',       ids: ['saved'] },
+    { label: 'Beworben',      ids: ['applied', 'confirmed'] },
+    { label: 'Gespräche',     ids: ['interview', 'interview2'] },
+    { label: 'Angebot',       ids: ['offer', 'accepted'] },
+    { label: 'Abgeschlossen', ids: ['rejected', 'withdrawn'] },
+  ];
+  const MODES   = [{ id: 'onsite', label: 'Vor Ort' }, { id: 'hybrid', label: 'Hybrid' }, { id: 'remote', label: 'Remote' }];
+  const KINDS   = [{ id: 'deadline', label: 'Unterlagen bis' }, { id: 'followup', label: 'Nachfassen' }, { id: 'interview', label: 'Gespräch' }, { id: 'other', label: 'Sonstiges' }];
+  const SOURCES = ['LinkedIn', 'StepStone', 'Indeed', 'XING', 'Firmenseite', 'Empfehlung', 'Arbeitsagentur', 'Personalvermittlung'];
+
+  // Spalten, die die App schreibt (created_at/updated_at setzt die Datenbank)
+  const APP_FIELDS  = ['id', 'user_id', 'company', 'position', 'location', 'work_mode', 'job_url', 'source', 'applied_on', 'status', 'salary',
+    'contact_name', 'contact_email', 'contact_phone', 'notes', 'posting_text', 'portal_url', 'portal_user', 'archived_at'];
+  const TASK_FIELDS = ['id', 'user_id', 'application_id', 'kind', 'title', 'due_date', 'due_time', 'done_at', 'note'];
+  const EVENT_FIELDS = ['id', 'user_id', 'application_id', 'status', 'changed_on', 'note'];
+</script>
+
+<!-- ================================================================ -->
+<!-- Kopfzeile                                                        -->
+<!-- ================================================================ -->
+<header>
+  <div class="wrap bar">
+    <img class="logo" src="icon.svg" alt="">
+    <div class="head">
+      <h1>Job Tracker</h1>
+      <div class="sub" x-text="view === 'app' ? longDate(today()) : 'Alle Bewerbungen an einem Ort'"></div>
+    </div>
+
+    <!-- Desktop: Navigation im Kopf -->
+    <nav class="seg nav-top" aria-label="Bereich" x-show="view === 'app'" x-cloak>
+      <template x-for="t in TABS" :key="t.id">
+        <button @click="go(t.id)" :aria-pressed="tab === t.id" type="button"><span x-text="t.label"></span><span class="n" x-show="t.id === 'soon' && urgentCount()" x-text="urgentCount()"></span></button>
+      </template>
+    </nav>
+
+    <div class="acts">
+      <button x-show="view === 'app'" x-cloak @click="openNew()" class="icon-btn add" type="button" aria-label="Neue Bewerbung" title="Neue Bewerbung">
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <button @click="toggleTheme()" class="icon-btn" type="button" :aria-label="dark ? 'Zum hellen Modus wechseln' : 'Zum dunklen Modus wechseln'" :title="dark ? 'Hell' : 'Dunkel'">
+        <svg x-show="!dark" class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+        <svg x-show="dark" x-cloak class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/></svg>
+      </button>
+
+      <!-- Profilmenü wie in den anderen Apps -->
+      <div class="me" x-show="view === 'app' || view === 'noaccess'" x-cloak @click.outside="menuOpen = false" @keydown.escape.window="if (menuOpen) { menuOpen = false; $refs.meBtn.focus(); }">
+        <button x-ref="meBtn" @click="menuOpen = !menuOpen" class="icon-btn" type="button" aria-label="Mein Konto" title="Mein Konto" aria-haspopup="menu" :aria-expanded="menuOpen" aria-controls="meMenu" style="overflow: visible">
+          <span style="position:absolute;inset:0;border-radius:50%;overflow:hidden;display:grid;place-items:center">
+            <template x-if="me.photo"><img :src="me.photo" alt=""></template>
+            <svg x-show="!me.photo" class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
+          </span>
+          <span x-show="view === 'app'" class="sync-dot" :class="syncLevel()"></span>
+        </button>
+        <div id="meMenu" class="pm-menu" x-show="menuOpen" x-cloak x-transition.opacity.duration.150ms @click="if ($event.target.closest('.pm-item')) menuOpen = false" role="menu">
+          <div class="pm-head">
+            <span class="pm-ava" :style="'background:' + me.color">
+              <template x-if="me.photo"><img :src="me.photo" alt=""></template>
+              <span x-show="!me.photo" x-text="me.initials"></span>
+            </span>
+            <div>
+              <b x-text="me.name"></b>
+              <small x-text="user?.email"></small>
+              <span class="pm-role" x-show="me.role" x-text="roleLabel(me.role)"></span>
+            </div>
+          </div>
+          <div class="pm-sync" x-show="view === 'app'" role="status">
+            <i :class="syncLevel()"></i>
+            <span><b>Cloud-Sync</b> · <span x-text="syncText()"></span></span>
+          </div>
+          <a class="pm-item" href="/" role="menuitem"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Dashboard</a>
+          <a class="pm-item" :href="ACCOUNT_URL" role="menuitem"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Kontoeinstellungen</a>
+          <a class="pm-item" :href="ADMIN_URL" role="menuitem" x-show="me.role === 'admin'"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6z"/><path d="m9 12 2 2 4-4"/></svg>Admin-Einstellungen<small>nur Admins</small></a>
+          <div class="pm-sep"></div>
+          <button class="pm-item danger" type="button" role="menuitem" @click="signOut()"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4"/></svg>Abmelden</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section x-show="view === 'loading'" aria-label="Wird geladen"><div class="spin"></div></section>
+
+  <!-- Login (Konten legt nur ein Admin an) -->
+  <section x-show="view === 'auth'" x-cloak class="gate fade-enter">
+    <form @submit.prevent="submitAuth()" class="card">
+      <h2 x-text="{ login: 'Anmelden', reset: 'Passwort zurücksetzen', recover: 'Neues Passwort' }[authMode]"></h2>
+      <p class="lead" x-show="authMode !== 'recover'">Wo du dich beworben hast, wie der Stand ist und welche Fristen laufen. Alles an einem Ort.</p>
+      <p class="lead" x-show="authMode === 'recover'">Wähle ein neues Passwort mit mindestens 8 Zeichen.</p>
+      <label x-show="authMode !== 'recover'">E-Mail
+        <input type="email" x-model="form.email" :required="authMode !== 'recover'" autocomplete="email" placeholder="du@beispiel.de">
+      </label>
+      <label x-show="authMode !== 'reset'"><span x-text="authMode === 'recover' ? 'Neues Passwort' : 'Passwort'"></span>
+        <input type="password" x-model="form.password" :required="authMode !== 'reset'" minlength="8" :autocomplete="authMode === 'login' ? 'current-password' : 'new-password'" placeholder="Mindestens 8 Zeichen">
+      </label>
+      <p x-show="auth.error" x-text="auth.error" class="msg" role="alert"></p>
+      <p x-show="auth.info" x-text="auth.info" class="msg ok"></p>
+      <button type="submit" :disabled="auth.busy" class="btn wide" x-text="auth.busy ? 'Einen Moment …' : { login: 'Anmelden', reset: 'Link senden', recover: 'Passwort speichern' }[authMode]"></button>
+      <div class="links">
+        <button x-show="authMode === 'login'" @click="switchAuth('reset')" type="button" class="link">Passwort vergessen?</button>
+        <button x-show="authMode === 'reset'" @click="switchAuth('login')" type="button" class="link">Zurück zur Anmeldung</button>
+        <span x-show="authMode === 'login'">Noch kein Konto? Zugänge vergibt dein Admin.</span>
+      </div>
+    </form>
+  </section>
+
+  <!-- Kein Zugriff -->
+  <section x-show="view === 'noaccess'" x-cloak class="gate fade-enter">
+    <div class="card">
+      <h2>Noch nicht freigeschaltet</h2>
+      <p class="lead">Dein Konto <b x-text="user?.email"></b> hat noch keinen Zugriff auf den Job Tracker. Sobald ein Admin dich freischaltet, kannst du hier direkt loslegen.</p>
+      <button @click="checkAccess()" type="button" class="btn ghost wide">Erneut prüfen</button>
+    </div>
+  </section>
+
+  <!-- ============================================================== -->
+  <!-- App                                                            -->
+  <!-- ============================================================== -->
+  <main x-show="view === 'app'" x-cloak>
+
+    <!-- Handy: Bereiche als iOS-Segment -->
+    <nav class="seg tabs" aria-label="Bereich">
+      <template x-for="t in TABS" :key="t.id">
+        <button @click="go(t.id)" :aria-pressed="tab === t.id" type="button"><span x-text="t.label"></span><span class="n" x-show="t.id === 'soon' && urgentCount()" x-text="urgentCount()"></span></button>
+      </template>
+    </nav>
+
+    <!-- ---------------- Übersicht ---------------- -->
+    <section x-show="tab === 'home'" class="home stack fade-enter">
+      <div class="stats" x-data="{ get s() { return stats() } }">
+        <div class="card stat"><span>Offen</span><b x-text="s.open"></b><p x-text="s.saved ? s.saved + ' gemerkt' : 'laufende Bewerbungen'"></p></div>
+        <div class="card stat"><span>Gespräche</span><b x-text="s.talks"></b><p>Bewerbungen mit Gespräch</p></div>
+        <div class="card stat"><span>Absagen</span><b x-text="s.rejected"></b><p x-text="s.offers ? s.offers + ' Angebot' + (s.offers === 1 ? '' : 'e') : 'bisher'"></p></div>
+        <div class="card stat"><span>Antwortquote</span><b x-html="s.rate"></b><p x-text="s.answered + ' von ' + s.applied + ' beantwortet'"></p></div>
+        <div class="card stat wide"><span>Ø Tage bis zur Antwort</span><b x-text="s.days"></b><p>ab Bewerbungsdatum</p></div>
+      </div>
+
+      <div class="card">
+        <div class="sec-head"><h3>Nächste Termine</h3><button class="link" type="button" @click="go('soon')" x-show="openTasks().length">Alle</button></div>
+        <template x-for="t in openTasks().slice(0, 3)" :key="t.id">
+          <button type="button" class="row" style="padding-inline:0" @click="openApp(t.application_id)">
+            <span class="txt"><span class="t1" x-text="t.title"></span><span class="t2" x-text="appName(t.application_id)"></span></span>
+            <span class="due" :class="dueClass(t)" x-text="dueText(t)"></span>
+          </button>
+        </template>
+        <p class="empty" x-show="!openTasks().length">Keine offenen Fristen.</p>
+      </div>
+
+      <div class="card">
+        <div class="sec-head"><h3>Zuletzt geändert</h3><button class="link" type="button" @click="go('apps')" x-show="apps.length">Alle</button></div>
+        <template x-for="a in recent()" :key="a.id">
+          <button type="button" class="row" style="padding-inline:0" @click="openApp(a.id)">
+            <span class="txt"><span class="t1" x-text="a.company"></span><span class="t2" x-text="a.position"></span></span>
+            <span class="tag" :class="ST[a.status].kind" x-text="ST[a.status].short"></span>
+          </button>
+        </template>
+        <div class="empty" x-show="!apps.length">Noch keine Bewerbung erfasst.<br><button class="btn" type="button" @click="openNew()">Erste Bewerbung erfassen</button></div>
+      </div>
+    </section>
+
+    <!-- ---------------- Bewerbungen ---------------- -->
+    <!-- ohne fade-enter: die Animation würde die Vollbild-Detailansicht unter den Kopf legen -->
+    <section x-show="tab === 'apps'" :class="{ split: wideList() }">
+      <div>
+        <div class="tools">
+          <label class="search"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
+            <input type="search" x-model="q" placeholder="Firma, Stelle oder Ort" aria-label="Suchen"></label>
+          <div class="chips" role="group" aria-label="Nach Status filtern">
+            <template x-for="f in FILTERS" :key="f.id">
+              <button class="chip" type="button" :aria-pressed="filter === f.id" @click="filter = f.id"><span x-text="f.label"></span><small x-text="countFor(f)"></small></button>
+            </template>
+          </div>
+          <div class="tools-row">
+            <label class="toggle"><input type="checkbox" x-model="showArchive"> Archiv zeigen</label>
+            <div class="seg view-mode" aria-label="Ansicht">
+              <button type="button" :aria-pressed="!board" @click="board = false; remember()" x-html="IC.list + 'Liste'"></button>
+              <button type="button" :aria-pressed="board" @click="board = true; remember()" x-html="IC.board + 'Spalten'"></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card list" x-show="!(board && wide)">
+          <template x-for="a in filtered()" :key="a.id">
+            <button type="button" class="row" :class="{ sel: sel === a.id }" @click="openApp(a.id)">
+              <span class="co" x-text="(a.company || '?').trim().charAt(0).toUpperCase()"></span>
+              <span class="txt"><span class="t1" x-text="a.company || 'Ohne Firma'"></span><span class="t2" x-text="[a.position, a.location, modeLabel(a.work_mode)].filter(Boolean).join(' · ')"></span></span>
+              <span class="side">
+                <span class="tag" :class="ST[a.status].kind" x-text="ST[a.status].short"></span>
+                <span class="due" x-show="nextTask(a.id)" :class="dueClass(nextTask(a.id))" x-text="dueText(nextTask(a.id))"></span>
+              </span>
+            </button>
+          </template>
+          <p class="empty" x-show="!filtered().length" x-text="apps.length ? 'Keine Treffer.' : 'Noch keine Bewerbung erfasst.'"></p>
+        </div>
+
+        <div class="board" x-show="board && wide">
+          <template x-for="c in COLUMNS" :key="c.label">
+            <div class="col">
+              <h4><span x-text="c.label"></span><span x-text="filtered().filter(a => c.ids.includes(a.status)).length"></span></h4>
+              <template x-for="a in filtered().filter(a => c.ids.includes(a.status))" :key="a.id">
+                <button type="button" class="bcard" @click="openApp(a.id)">
+                  <b x-text="a.company"></b><small x-text="a.position"></small>
+                  <span><span class="tag" :class="ST[a.status].kind" x-text="ST[a.status].short"></span></span>
+                </button>
+              </template>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Detail: Handy Vollbild, Desktop rechte Spalte (bzw. Seitenleiste in der Spaltenansicht) -->
+      <template x-if="cur()">
+        <article class="detail" :class="{ float: !wideList() }" x-data="{ get a() { return cur() } }" @keydown.escape="closeApp()">
+          <div class="d-bar">
+            <button class="back" type="button" @click="closeApp()"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg>Zurück</button>
+            <span class="st" x-text="saveStatus()"></span>
+          </div>
+          <div class="d-inner">
+            <div class="card d-head">
+              <input class="company" x-model="a.company" @input="queueSave(a)" placeholder="Firma" maxlength="200" aria-label="Firma">
+              <input class="position" x-model="a.position" @input="queueSave(a)" placeholder="Stelle" maxlength="200" aria-label="Stelle">
+              <p class="need" x-show="!valid(a)">Firma und Stelle sind Pflicht, sonst wird nicht gespeichert.</p>
+              <div class="status-pick" role="group" aria-label="Status">
+                <template x-for="s in STATUSES" :key="s.id">
+                  <button type="button" :class="s.kind" :aria-pressed="a.status === s.id" @click="setStatus(a, s.id)" x-text="s.label"></button>
+                </template>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="sec-head"><h3>Eckdaten</h3></div>
+              <div class="form">
+                <label class="f"><span>Ort</span><input x-model="a.location" @input="queueSave(a)" maxlength="200" placeholder="z. B. München"></label>
+                <label class="f"><span>Arbeitsmodell</span>
+                  <select x-model="a.work_mode" @change="a.work_mode = a.work_mode || null; queueSave(a)">
+                    <option value="">–</option><template x-for="m in MODES" :key="m.id"><option :value="m.id" x-text="m.label" :selected="a.work_mode === m.id"></option></template>
+                  </select></label>
+                <label class="f"><span>Beworben am</span><input type="date" :value="a.applied_on || ''" @change="a.applied_on = $event.target.value || null; queueSave(a)"></label>
+                <label class="f"><span>Quelle</span><input x-model="a.source" @input="queueSave(a)" list="sources" maxlength="100" placeholder="LinkedIn, Firmenseite …"></label>
+                <label class="f"><span>Gehaltswunsch</span><input x-model="a.salary" @input="queueSave(a)" maxlength="100" placeholder="z. B. 68–72 k €"></label>
+                <label class="f"><span>Anzeige</span><input type="url" x-model="a.job_url" @input="queueSave(a)" maxlength="2000" placeholder="https://…" inputmode="url">
+                  <a class="go" x-show="isUrl(a.job_url)" :href="a.job_url" target="_blank" rel="noopener" aria-label="Anzeige öffnen" x-html="IC.ext"></a></label>
+              </div>
+              <p class="note" x-show="a.job_url && !isUrl(a.job_url)" style="color:var(--warn)">Link muss mit https:// beginnen.</p>
+            </div>
+
+            <div class="card">
+              <div class="sec-head"><h3>Fristen und To-dos</h3></div>
+              <template x-for="t in tasksOf(a.id)" :key="t.id">
+                <div class="task" :class="{ done: t.done_at }">
+                  <button type="button" class="check" :aria-pressed="!!t.done_at" @click="toggleTask(t)" :aria-label="t.done_at ? 'Als offen markieren' : 'Erledigt'" x-html="IC.check"></button>
+                  <span class="txt"><span class="t1" x-text="t.title"></span><span class="t2" :class="t.done_at ? '' : dueClass(t)" x-text="kindLabel(t.kind) + ' · ' + dueText(t, true)"></span></span>
+                  <button type="button" class="x" @click="deleteTask(t)" aria-label="Löschen" x-html="IC.x"></button>
+                </div>
+              </template>
+              <p class="note" x-show="!tasksOf(a.id).length" style="margin-top:0">Noch keine Frist.</p>
+              <form class="add-task" @submit.prevent="addTask(a)">
+                <input type="text" x-model="nt.title" maxlength="200" placeholder="z. B. Unterlagen nachreichen" required aria-label="Was?">
+                <div class="line">
+                  <select x-model="nt.kind" aria-label="Art"><template x-for="k in KINDS" :key="k.id"><option :value="k.id" x-text="k.label" :selected="nt.kind === k.id"></option></template></select>
+                  <input type="date" x-model="nt.due_date" required aria-label="Datum">
+                  <input type="time" x-model="nt.due_time" aria-label="Uhrzeit">
+                </div>
+                <button class="btn small" type="submit" style="justify-self:start">Frist hinzufügen</button>
+              </form>
+            </div>
+
+            <div class="card">
+              <div class="sec-head"><h3>Verlauf</h3><small class="note" style="margin:0">Datum antippen zum Ändern</small></div>
+              <div class="tl">
+                <template x-for="e in eventsOf(a.id)" :key="e.id">
+                  <div class="ev">
+                    <span class="what" x-text="ST[e.status]?.label"></span>
+                    <input type="date" :value="e.changed_on" @change="if ($event.target.value) { e.changed_on = $event.target.value; saveEvent(e) }" :disabled="e._local" aria-label="Datum">
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="sec-head"><h3>Ansprechperson</h3></div>
+              <div class="form">
+                <label class="f"><span>Name</span><input x-model="a.contact_name" @input="queueSave(a)" maxlength="200" autocomplete="off"></label>
+                <label class="f"><span>E-Mail</span><input type="email" x-model="a.contact_email" @input="queueSave(a)" maxlength="320" autocomplete="off" inputmode="email">
+                  <a class="go" x-show="a.contact_email" :href="'mailto:' + a.contact_email" aria-label="E-Mail schreiben" x-html="IC.mail"></a></label>
+                <label class="f"><span>Telefon</span><input type="tel" x-model="a.contact_phone" @input="queueSave(a)" maxlength="50" autocomplete="off">
+                  <a class="go" x-show="a.contact_phone" :href="'tel:' + (a.contact_phone || '').replace(/[^\d+]/g, '')" aria-label="Anrufen" x-html="IC.phone"></a></label>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="sec-head"><h3>Bewerberportal</h3></div>
+              <div class="form">
+                <label class="f"><span>Portal</span><input type="url" x-model="a.portal_url" @input="queueSave(a)" maxlength="2000" placeholder="https://…" inputmode="url">
+                  <a class="go" x-show="isUrl(a.portal_url)" :href="a.portal_url" target="_blank" rel="noopener" aria-label="Portal öffnen" x-html="IC.ext"></a></label>
+                <label class="f"><span>Benutzername</span><input x-model="a.portal_user" @input="queueSave(a)" maxlength="200" autocomplete="off"></label>
+              </div>
+              <p class="note"><span x-html="IC.key"></span> Das Passwort liegt im Passwort-Manager. Hier wird es bewusst nicht gespeichert.</p>
+            </div>
+
+            <div class="card">
+              <details class="fold" :open="!a.posting_text">
+                <summary><h3>Stellenanzeige</h3><small x-text="a._noPosting ? 'offline nicht geladen' : a.posting_text ? Math.round(a.posting_text.length / 100) / 10 + ' k Zeichen gesichert' : 'noch nicht gesichert'"></small><svg class="ic chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary>
+                <div class="fold-body">
+                  <div class="area"><textarea class="field" rows="4" maxlength="100000" x-model="a.posting_text" x-effect="a.posting_text; $el.closest('details').open && grow($el)" @input="queueSave(a); grow($el)" :disabled="a._noPosting"
+                    placeholder="Text der Anzeige hier einfügen. Anzeigen gehen oft offline."></textarea></div>
+                </div>
+              </details>
+            </div>
+
+            <div class="card">
+              <div class="sec-head"><h3>Notizen</h3></div>
+              <div class="area"><textarea class="field" rows="3" maxlength="10000" x-model="a.notes" x-effect="a.notes; grow($el)" @input="queueSave(a)" placeholder="Eindrücke, Fragen fürs Gespräch, Gehaltsrahmen …"></textarea></div>
+            </div>
+
+            <div class="d-foot">
+              <button class="btn ghost" type="button" @click="toggleArchive(a)" x-text="a.archived_at ? 'Aus dem Archiv holen' : 'Archivieren'"></button>
+              <button class="btn red" type="button" @click="deleteApp(a)">Löschen</button>
+            </div>
+            <p class="status" :class="{ err: saveState === 'error' }" x-text="saveStatus()"></p>
+          </div>
+        </article>
+      </template>
+      <div class="card empty" x-show="wideList() && !cur()" style="margin-top:0">Wähle links eine Bewerbung aus.</div>
+    </section>
+
+    <!-- ---------------- Demnächst ---------------- -->
+    <section x-show="tab === 'soon'" class="soon fade-enter">
+      <template x-for="g in soonGroups()" :key="g.label">
+        <div>
+          <p class="group-label" :class="{ late: g.late }" x-text="g.label"></p>
+          <div class="card list">
+            <template x-for="t in g.tasks" :key="t.id">
+              <div class="row" style="cursor:default">
+                <button type="button" class="check" :aria-pressed="!!t.done_at" @click="toggleTask(t)" aria-label="Erledigt" x-html="IC.check"></button>
+                <button type="button" class="txt" style="border:0;background:none;text-align:left;padding:0;color:inherit" @click="openApp(t.application_id)">
+                  <span class="t1" x-text="t.title"></span><span class="t2" x-text="kindLabel(t.kind) + ' · ' + appName(t.application_id)"></span>
+                </button>
+                <span class="due" :class="dueClass(t)" x-text="dueText(t, true)"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
+      <div class="card empty" x-show="!openTasks().length">Nichts offen. Fristen legst du in einer Bewerbung an.</div>
+    </section>
+  </main>
+</div>
+
+<datalist id="sources"><template x-for="s in SOURCES"><option :value="s"></option></template></datalist>
+
+<!-- Neue Bewerbung -->
+<template x-if="newForm">
+  <div class="modal-bg" x-transition.opacity @click.self="newForm = null" @keydown.escape.window="newForm = null">
+    <form class="modal" @submit.prevent="createApp()">
+      <h2>Neue Bewerbung</h2>
+      <div class="form">
+        <label class="f"><span>Firma</span><input x-model="newForm.company" required maxlength="200" x-init="$nextTick(() => $el.focus())"></label>
+        <label class="f"><span>Stelle</span><input x-model="newForm.position" required maxlength="200"></label>
+        <label class="f"><span>Anzeige</span><input type="url" x-model="newForm.job_url" maxlength="2000" placeholder="https://…" inputmode="url"></label>
+      </div>
+      <div class="seg" role="group" aria-label="Status">
+        <button type="button" :aria-pressed="newForm.status === 'saved'" @click="newForm.status = 'saved'">Nur merken</button>
+        <button type="button" :aria-pressed="newForm.status === 'applied'" @click="newForm.status = 'applied'">Heute beworben</button>
+      </div>
+      <p class="msg" x-show="newForm.job_url && !isUrl(newForm.job_url)">Link muss mit https:// beginnen.</p>
+      <div class="btns"><button class="btn ghost" type="button" @click="newForm = null">Abbrechen</button><button class="btn" type="submit" :disabled="!newForm.company.trim() || !newForm.position.trim() || (newForm.job_url && !isUrl(newForm.job_url))">Anlegen</button></div>
+    </form>
+  </div>
+</template>
+
+<script>
+  // ================================================================
+  // Datum (immer lokale Zeit, nie UTC)
+  // ================================================================
+  const pad = n => String(n).padStart(2, '0');
+  const toISO = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const fromISO = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  const fmt = (s, o) => new Intl.DateTimeFormat('de-DE', o).format(fromISO(s));
+  const addDays = (iso, n) => { const d = fromISO(iso); d.setDate(d.getDate() + n); return toISO(d); };
+  const dayDiff = (a, b) => Math.round((fromISO(b) - fromISO(a)) / 864e5);
+  const isOffline = e => !navigator.onLine || /fetch|network|load failed/i.test(String(e?.message || e));
+  const pick = (o, keys) => Object.fromEntries(keys.filter(k => o[k] !== undefined).map(k => [k, o[k] === '' ? null : o[k]]));
+  const hhmm = t => t ? String(t).slice(0, 5) : null;
+
+  // Passwort gegen HaveIBeenPwned prüfen (nur die ersten 5 Zeichen des SHA-1 verlassen den Browser)
+  async function pwnedCount(password) {
+    try {
+      const hash = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(password));
+      const hex = [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+      const res = await fetch('https://api.pwnedpasswords.com/range/' + hex.slice(0, 5), { signal: AbortSignal.timeout(5000) });
+      if (!res.ok) return 0;
+      const line = (await res.text()).split('\n').find(l => l.startsWith(hex.slice(5) + ':'));
+      return line ? parseInt(line.split(':')[1], 10) || 0 : 0;
+    } catch (e) { return 0; }
+  }
+
+  function jobTracker() {
+    const mq = matchMedia('(min-width: 1024px)');
+    return {
+      sb: null,
+      view: 'loading',            // loading | auth | noaccess | app
+      dark: document.documentElement.classList.contains('dark'),
+      wide: mq.matches,
+      user: null,
+      ACCOUNT_URL, ADMIN_URL, IC, STATUSES, ST, FILTERS, COLUMNS, MODES, KINDS, SOURCES,
+      TABS: [{ id: 'home', label: 'Übersicht' }, { id: 'apps', label: 'Bewerbungen' }, { id: 'soon', label: 'Demnächst' }],
+      menuOpen: false,
+      me: { name: '', initials: '', color: AVATAR_COLORS[0], photo: null, role: null },
+
+      authMode: 'login',
+      form: { email: '', password: '' },
+      auth: { busy: false, error: '', info: '' },
+
+      tab: 'home',
+      apps: [], events: [], tasks: [],
+      sel: null,                  // gewählte Bewerbung (id)
+      q: '', filter: 'all', showArchive: false, board: false,
+      newForm: null,
+      nt: { title: '', kind: 'deadline', due_date: '', due_time: '' },
+      saveState: 'idle',          // idle | pending | saving | saved | offline | error
+      timers: {},
+      lastSync: null,
+      queueLen: 0,
+      flushing: false,
+      tick: 0,                    // ändert sich beim Tageswechsel, damit „heute“ neu berechnet wird
+
+      // ------------------------------------------------------------
+      // Start
+      // ------------------------------------------------------------
+      async init() {
+        this.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        mq.addEventListener('change', e => this.wide = e.matches);
+        try { this.board = localStorage.getItem('jobtracker-board') === '1'; } catch (_) {}
+
+        this.sb.auth.onAuthStateChange((event, session) => {
+          if (event === 'PASSWORD_RECOVERY') { this.user = session?.user ?? null; this.switchAuth('recover'); this.view = 'auth'; return; }
+          if (event === 'SIGNED_OUT') { this.reset(); return; }
+          if (event === 'SIGNED_IN' && session && this.user?.id !== session.user.id) {
+            this.user = session.user;
+            setTimeout(() => this.checkAccess(), 0);
+          }
+        });
+
+        const { data: { session } } = await this.sb.auth.getSession();
+        if (session && this.authMode !== 'recover') { this.user = session.user; await this.checkAccess(); }
+        else if (this.authMode !== 'recover') this.view = 'auth';
+
+        window.addEventListener('storage', e => {
+          if (e.key !== 'overall-theme' || !e.newValue) return;
+          this.dark = e.newValue === 'dark';
+          document.documentElement.classList.toggle('dark', this.dark);
+        });
+        window.addEventListener('online', () => this.flushQueue());
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState !== 'visible' || this.view !== 'app') return;
+          this.tick++;
+          this.flushQueue();
+        });
+        window.addEventListener('beforeunload', () => this.saveAllNow());
+        // Android-Zurück schließt erst die Detailansicht
+        window.addEventListener('popstate', () => { if (this.sel) this.sel = null; });
+      },
+
+      reset() {
+        this.user = null; this.menuOpen = false;
+        this.me = { name: '', initials: '', color: AVATAR_COLORS[0], photo: null, role: null };
+        this.apps = []; this.events = []; this.tasks = []; this.sel = null; this.tab = 'home';
+        this.form.password = ''; this.switchAuth('login'); this.view = 'auth';
+      },
+
+      toggleTheme() {
+        this.dark = !this.dark;
+        document.documentElement.classList.toggle('dark', this.dark);
+        try { localStorage.setItem('overall-theme', this.dark ? 'dark' : 'light'); } catch (_) {}
+      },
+      remember() { try { localStorage.setItem('jobtracker-board', this.board ? '1' : '0'); } catch (_) {} },
+
+      roleLabel: r => ({ admin: 'Admin', member: 'Mitglied', guest: 'Gast' })[r] || r,
+
+      // Name, Profilbild und App-Rolle aus dem gemeinsamen Konto (gilt für alle Apps)
+      async loadMe() {
+        const fallback = this.user.email.split('@')[0];
+        const [{ data: p }, { data: role }] = await Promise.all([
+          this.sb.from('overall_profiles').select('display_name, avatar_path').eq('id', this.user.id).maybeSingle(),
+          this.sb.rpc('overall_app_role', { p_app: APP_ID }),
+        ]);
+        const name = p?.display_name || fallback;
+        let h = 0; for (const c of name) h = (h * 31 + c.codePointAt(0)) >>> 0;
+        let photo = null;
+        if (p?.avatar_path) {
+          const { data } = await this.sb.storage.from('avatars').createSignedUrl(p.avatar_path, 3600);
+          photo = data?.signedUrl || null;
+        }
+        this.me = {
+          name, photo, role: role || null,
+          initials: name.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?',
+          color: AVATAR_COLORS[h % AVATAR_COLORS.length],
+        };
+        try { localStorage.setItem('jobtracker-me-' + this.user.id, JSON.stringify({ ...this.me, photo: null })); } catch (_) {}
+      },
+
+      async checkAccess() {
+        const key = 'jobtracker-access-' + this.user.id;
+        this.loadMe().catch(e => {
+          try { Object.assign(this.me, JSON.parse(localStorage.getItem('jobtracker-me-' + this.user.id)) || {}); } catch (_) {}
+          if (!isOffline(e)) console.error(e);
+        });
+        const { data, error } = await this.sb.rpc('jobtracker_is_member');
+        let ok = data === true;
+        // Offline: letzte bekannte Freischaltung verwenden, damit man auch ohne Netz arbeiten kann
+        if (error) { if (isOffline(error)) { try { ok = localStorage.getItem(key) === '1'; } catch (_) {} } else console.error(error); }
+        else { try { localStorage.setItem(key, ok ? '1' : '0'); } catch (_) {} }
+        if (!ok) { this.view = 'noaccess'; return; }
+        this.view = 'app';
+        await this.loadAll();
+        this.flushQueue();
+      },
+
+      // ------------------------------------------------------------
+      // Anmeldung (wie MigraLog)
+      // ------------------------------------------------------------
+      switchAuth(mode) { this.authMode = mode; this.auth.error = ''; this.auth.info = ''; },
+      async submitAuth() {
+        this.auth.busy = true; this.auth.error = ''; this.auth.info = '';
+        try {
+          if (this.authMode === 'login') {
+            const { error } = await this.sb.auth.signInWithPassword({ email: this.form.email, password: this.form.password });
+            if (error) throw error;
+          } else if (this.authMode === 'reset') {
+            const { error } = await this.sb.auth.resetPasswordForEmail(this.form.email, { redirectTo: location.origin + location.pathname });
+            if (error) throw error;
+            this.auth.info = 'Wenn ein Konto existiert, ist der Link unterwegs.';
+          } else {
+            const leaks = await pwnedCount(this.form.password);
+            if (leaks) throw new Error(`Dieses Passwort ist aus Datenlecks bekannt (${leaks.toLocaleString('de-DE')}× gefunden). Bitte wähle ein anderes.`);
+            const { error } = await this.sb.auth.updateUser({ password: this.form.password });
+            if (error) throw error;
+            this.form.password = ''; this.switchAuth('login');
+            await this.checkAccess();
+          }
+        } catch (e) {
+          const m = e?.message || String(e);
+          this.auth.error = /invalid login credentials/i.test(m) ? 'E-Mail oder Passwort stimmen nicht.'
+            : /rate limit/i.test(m) ? 'Zu viele Versuche. Bitte warte einen Moment.'
+            : isOffline(e) ? 'Keine Verbindung. Bist du online?' : m;
+        } finally { this.auth.busy = false; }
+      },
+      async signOut() {
+        await this.saveAllNow();
+        await this.sb.auth.signOut();
+      },
+
+      // ------------------------------------------------------------
+      // Laden und Zwischenspeicher für offline
+      // ------------------------------------------------------------
+      cacheKey() { return 'jobtracker-cache-' + this.user.id; },
+      async loadAll() {
+        const [a, e, t] = await Promise.all([
+          this.sb.from('jobtracker_applications').select('*').order('updated_at', { ascending: false }).limit(2000),
+          this.sb.from('jobtracker_events').select('*').order('changed_on').order('created_at').limit(10000),
+          this.sb.from('jobtracker_tasks').select('*').order('due_date').limit(5000),
+        ]);
+        const err = a.error || e.error || t.error;
+        if (err) {
+          if (!isOffline(err)) console.error(err);
+          this.saveState = isOffline(err) ? 'offline' : 'error';
+          // Offline: letzten Stand vom Gerät zeigen (ohne Anzeigentexte, die wären zu groß)
+          try { const c = JSON.parse(localStorage.getItem(this.cacheKey())); if (c) { this.apps = c.apps; this.events = c.events; this.tasks = c.tasks; } } catch (_) {}
+        } else {
+          this.apps = a.data; this.events = e.data; this.tasks = t.data; this.lastSync = new Date();
+          this.writeCache();
+        }
+        // Noch nicht gesendete Änderungen darüberlegen
+        for (const op of this.readQueue()) this.applyLocal(op);
+        this.queueLen = this.readQueue().length;
+      },
+      writeCache() {
+        try {
+          localStorage.setItem(this.cacheKey(), JSON.stringify({
+            apps: this.apps.map(x => ({ ...pick(x, [...APP_FIELDS, 'updated_at', 'created_at']), posting_text: null, _noPosting: !!x.posting_text })),
+            events: this.events.filter(x => !x._local), tasks: this.tasks,
+          }));
+        } catch (_) {}
+      },
+
+      // ------------------------------------------------------------
+      // Speichern und Offline-Warteschlange
+      // Eine Liste von { t: Tabelle, op: 'upsert' | 'delete', row } in Sende-Reihenfolge.
+      // IDs erzeugt die App selbst, darum schadet doppeltes Nachsenden nicht.
+      // ------------------------------------------------------------
+      queueKey() { return 'jobtracker-queue-' + this.user.id; },
+      readQueue() { try { return JSON.parse(localStorage.getItem(this.queueKey())) || []; } catch (_) { return []; } },
+      writeQueue(q) {
+        try { q.length ? localStorage.setItem(this.queueKey(), JSON.stringify(q)) : localStorage.removeItem(this.queueKey()); } catch (_) {}
+        this.queueLen = q.length;
+      },
+      enqueue(op) {
+        const q = this.readQueue();
+        const i = q.findIndex(x => x.t === op.t && x.row.id === op.row.id);
+        // gleiche Zeile: Platz behalten, damit eine Bewerbung vor ihren Fristen ankommt
+        if (i >= 0) q[i] = op; else q.push(op);
+        this.writeQueue(q);
+      },
+      dequeue(op) { this.writeQueue(this.readQueue().filter(x => !(x.t === op.t && x.row.id === op.row.id && JSON.stringify(x.row) === JSON.stringify(op.row)))); },
+
+      // Ergebnis: 'ok' | 'offline' | 'error'
+      async send(op, fromQueue = false) {
+        const tb = this.sb.from(op.t);
+        const { error } = op.op === 'delete' ? await tb.delete().eq('id', op.row.id) : await tb.upsert(op.row);
+        if (error) {
+          if (isOffline(error)) { this.saveState = 'offline'; if (!fromQueue) this.enqueue(op); return 'offline'; }
+          console.error(error); this.saveState = 'error';
+          if (fromQueue) this.dequeue(op);   // würde ewig scheitern (z. B. Regel verletzt)
+          return 'error';
+        }
+        if (fromQueue) this.dequeue(op);
+        this.lastSync = new Date();
+        return 'ok';
+      },
+      async run(op) {
+        this.applyLocal(op);
+        this.saveState = 'saving';
+        // Warteschlange zuerst, damit die Reihenfolge stimmt
+        if (this.queueLen) { this.enqueue(op); await this.flushQueue(); return; }
+        const r = await this.send(op);
+        if (r === 'ok' && this.saveState === 'saving') this.saveState = 'saved';
+        if (r === 'ok' && op.t === 'jobtracker_applications' && op.op === 'upsert') this.refreshEvents(op.row.id);
+        if (r === 'ok') this.writeCache();
+      },
+      async flushQueue() {
+        if (!this.user || this.view !== 'app' || this.flushing) return;
+        this.flushing = true;
+        try {
+          for (const op of this.readQueue()) {
+            const r = await this.send(op, true);
+            if (r === 'offline') return;
+            if (op.t === 'jobtracker_applications') this.refreshEvents(op.row.id);
+          }
+          if (this.saveState === 'offline' || this.saveState === 'saving') this.saveState = 'saved';
+          this.writeCache();
+        } finally { this.flushing = false; }
+      },
+      applyLocal(op) {
+        const list = { jobtracker_applications: 'apps', jobtracker_events: 'events', jobtracker_tasks: 'tasks' }[op.t];
+        const i = this[list].findIndex(x => x.id === op.row.id);
+        if (op.op === 'delete') { if (i >= 0) this[list].splice(i, 1); return; }
+        if (i >= 0) Object.assign(this[list][i], op.row); else this[list].push({ ...op.row });
+      },
+      // Den Verlauf schreibt die Datenbank (Trigger). Danach die echten Einträge holen.
+      async refreshEvents(appId) {
+        const { data, error } = await this.sb.from('jobtracker_events').select('*').eq('application_id', appId).order('changed_on').order('created_at');
+        if (error) return;
+        this.events = [...this.events.filter(e => e.application_id !== appId), ...data];
+      },
+
+      // Bewerbung: Tippen sammelt sich 700 ms, dann wird gespeichert
+      queueSave(a) {
+        this.saveState = 'pending';
+        clearTimeout(this.timers[a.id]);
+        this.timers[a.id] = setTimeout(() => this.saveApp(a), 700);
+      },
+      valid: a => !!(a.company || '').trim() && !!(a.position || '').trim(),
+      isUrl: u => /^https?:\/\/\S+/i.test(u || ''),
+      async saveApp(a) {
+        clearTimeout(this.timers[a.id]); delete this.timers[a.id];
+        if (!this.valid(a) || (a.job_url && !this.isUrl(a.job_url)) || (a.portal_url && !this.isUrl(a.portal_url))) { this.saveState = 'idle'; return; }
+        const row = pick(a, APP_FIELDS);
+        if (a._noPosting) delete row.posting_text;   // offline nicht geladen → nicht überschreiben
+        row.company = row.company.trim(); row.position = row.position.trim();
+        await this.run({ t: 'jobtracker_applications', op: 'upsert', row });
+      },
+      async saveAllNow() { for (const id of Object.keys(this.timers)) { const a = this.apps.find(x => x.id === id); if (a) await this.saveApp(a); } },
+
+      openNew() { this.newForm = { company: '', position: '', job_url: '', status: 'applied' }; },
+      async createApp() {
+        const f = this.newForm; this.newForm = null;
+        const a = { id: crypto.randomUUID(), user_id: this.user.id, company: f.company.trim(), position: f.position.trim(), job_url: f.job_url.trim() || null,
+          status: f.status, applied_on: f.status === 'applied' ? this.today() : null, updated_at: new Date().toISOString() };
+        this.events.push({ id: 'local-' + a.id, application_id: a.id, status: a.status, changed_on: this.today(), _local: true });
+        await this.run({ t: 'jobtracker_applications', op: 'upsert', row: a });
+        this.openApp(a.id);
+      },
+
+      setStatus(a, s) {
+        if (a.status === s) return;
+        a.status = s;
+        if (s === 'applied' && !a.applied_on) a.applied_on = this.today();
+        a.updated_at = new Date().toISOString();
+        // sofort in der Zeitleiste zeigen, die Datenbank schreibt den echten Eintrag
+        this.events.push({ id: 'local-' + crypto.randomUUID(), application_id: a.id, status: s, changed_on: this.today(), _local: true });
+        this.saveApp(a);
+      },
+      toggleArchive(a) {
+        a.archived_at = a.archived_at ? null : new Date().toISOString();
+        this.saveApp(a);
+        if (a.archived_at && !this.showArchive) this.closeApp();
+      },
+      async deleteApp(a) {
+        if (!confirm(`„${a.company}“ mit Verlauf und Fristen endgültig löschen?\nArchivieren behält alles.`)) return;
+        clearTimeout(this.timers[a.id]); delete this.timers[a.id];
+        // wartende Änderungen an dieser Bewerbung sind hinfällig
+        this.writeQueue(this.readQueue().filter(x => x.row.id !== a.id && x.row.application_id !== a.id));
+        this.closeApp();
+        this.events = this.events.filter(e => e.application_id !== a.id);
+        this.tasks = this.tasks.filter(t => t.application_id !== a.id);
+        await this.run({ t: 'jobtracker_applications', op: 'delete', row: { id: a.id } });
+      },
+
+      // Fristen
+      async addTask(a) {
+        const n = this.nt;
+        if (!n.title.trim() || !n.due_date) return;
+        const row = { id: crypto.randomUUID(), user_id: this.user.id, application_id: a.id, kind: n.kind, title: n.title.trim(), due_date: n.due_date, due_time: n.due_time || null, done_at: null };
+        this.nt = { title: '', kind: n.kind, due_date: '', due_time: '' };
+        await this.run({ t: 'jobtracker_tasks', op: 'upsert', row });
+      },
+      toggleTask(t) {
+        this.run({ t: 'jobtracker_tasks', op: 'upsert', row: { ...pick(t, TASK_FIELDS), done_at: t.done_at ? null : new Date().toISOString() } });
+      },
+      deleteTask(t) { this.run({ t: 'jobtracker_tasks', op: 'delete', row: { id: t.id } }); },
+      saveEvent(e) { this.run({ t: 'jobtracker_events', op: 'upsert', row: pick(e, EVENT_FIELDS) }); },
+
+      // ------------------------------------------------------------
+      // Navigation
+      // ------------------------------------------------------------
+      go(tab) { this.tab = tab; if (tab !== 'apps') this.sel = null; window.scrollTo({ top: 0 }); },
+      wideList() { return this.wide && !this.board && this.tab === 'apps'; },
+      openApp(id) {
+        this.tab = 'apps';
+        if (!this.wideList() && !this.sel) history.pushState({ d: 1 }, '');
+        this.sel = id;
+        this.nt = { title: '', kind: 'deadline', due_date: '', due_time: '' };
+        this.$nextTick(() => document.querySelector('.detail.float')?.scrollTo({ top: 0 }));
+      },
+      closeApp() {
+        const a = this.cur(); if (a && this.timers[a.id]) this.saveApp(a);
+        if (this.sel && history.state?.d) history.back(); else this.sel = null;
+      },
+      cur() { return this.apps.find(a => a.id === this.sel) || null; },
+
+      // ------------------------------------------------------------
+      // Listen und Kennzahlen
+      // ------------------------------------------------------------
+      today() { this.tick; return toISO(new Date()); },
+      modeLabel: m => MODES.find(x => x.id === m)?.label || '',
+      kindLabel: k => KINDS.find(x => x.id === k)?.label || '',
+      appName(id) { const a = this.apps.find(x => x.id === id); return a ? a.company + (a.position ? ' · ' + a.position : '') : ''; },
+      visible() { return this.apps.filter(a => this.showArchive ? true : !a.archived_at); },
+      countFor(f) { return this.visible().filter(f.test).length; },
+      filtered() {
+        const f = FILTERS.find(x => x.id === this.filter), s = this.q.trim().toLowerCase();
+        return this.visible().filter(f.test)
+          .filter(a => !s || [a.company, a.position, a.location, a.source].some(v => (v || '').toLowerCase().includes(s)))
+          .sort((x, y) => (y.updated_at || '').localeCompare(x.updated_at || ''));
+      },
+      recent() { return [...this.apps].filter(a => !a.archived_at).sort((x, y) => (y.updated_at || '').localeCompare(x.updated_at || '')).slice(0, 5); },
+      eventsOf(id) { return this.events.filter(e => e.application_id === id).sort((x, y) => x.changed_on.localeCompare(y.changed_on)); },
+      tasksOf(id) { return this.tasks.filter(t => t.application_id === id).sort((x, y) => (!!x.done_at - !!y.done_at) || (x.due_date + (x.due_time || '')).localeCompare(y.due_date + (y.due_time || ''))); },
+      // Offene Fristen aktiver Bewerbungen
+      openTasks() {
+        const live = new Set(this.apps.filter(a => !a.archived_at).map(a => a.id));
+        return this.tasks.filter(t => !t.done_at && live.has(t.application_id))
+          .sort((x, y) => (x.due_date + (x.due_time || '')).localeCompare(y.due_date + (y.due_time || '')));
+      },
+      nextTask(id) { return this.openTasks().find(t => t.application_id === id); },
+      urgentCount() { const t = this.today(); return this.openTasks().filter(x => x.due_date <= t).length; },
+      soonGroups() {
+        const t = this.today(), wk = addDays(t, 7);
+        const g = [
+          { label: 'Überfällig', late: true, tasks: [] }, { label: 'Heute', tasks: [] },
+          { label: 'Nächste 7 Tage', tasks: [] }, { label: 'Später', tasks: [] },
+        ];
+        for (const x of this.openTasks()) g[x.due_date < t ? 0 : x.due_date === t ? 1 : x.due_date <= wk ? 2 : 3].tasks.push(x);
+        return g.filter(x => x.tasks.length);
+      },
+      dueClass(t) { if (!t) return ''; const d = this.today(); return t.due_date < d ? 'late' : t.due_date === d ? 'today' : ''; },
+      dueText(t, long = false) {
+        if (!t) return '';
+        const n = dayDiff(this.today(), t.due_date);
+        const day = n === 0 ? 'Heute' : n === 1 ? 'Morgen' : n === -1 ? 'Gestern' : fmt(t.due_date, long ? { weekday: 'short', day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short' });
+        return day + (t.due_time ? ', ' + hhmm(t.due_time) : '');
+      },
+
+      stats() {
+        const all = this.apps, ev = id => this.eventsOf(id);
+        const applied = all.filter(a => a.applied_on || ev(a.id).some(e => e.status !== 'saved'));
+        let answered = 0, days = [];
+        for (const a of applied) {
+          const ans = ev(a.id).find(e => ANSWERS.includes(e.status));
+          if (!ans) continue;
+          answered++;
+          if (a.applied_on && ans.changed_on >= a.applied_on) days.push(dayDiff(a.applied_on, ans.changed_on));
+        }
+        return {
+          open: all.filter(a => !a.archived_at && RUNNING.includes(a.status)).length,
+          saved: all.filter(a => !a.archived_at && a.status === 'saved').length,
+          talks: all.filter(a => ev(a.id).some(e => e.status === 'interview' || e.status === 'interview2')).length,
+          rejected: all.filter(a => a.status === 'rejected').length,
+          offers: all.filter(a => a.status === 'offer' || a.status === 'accepted').length,
+          applied: applied.length, answered,
+          rate: applied.length ? Math.round(answered / applied.length * 100) + '<small> %</small>' : '–',
+          days: days.length ? (days.reduce((x, y) => x + y, 0) / days.length).toLocaleString('de-DE', { maximumFractionDigits: 1 }) : '–',
+        };
+      },
+
+      // ------------------------------------------------------------
+      // Sync-Anzeige (wie MigraLog)
+      // ------------------------------------------------------------
+      syncLevel() {
+        if (this.saveState === 'error') return 'error';
+        if (this.saveState === 'offline' || this.queueLen) return 'pending';
+        return '';
+      },
+      syncText() {
+        const n = this.queueLen;
+        if (this.saveState === 'error') return 'Speichern fehlgeschlagen';
+        if (this.saveState === 'offline' || n) return `Offline · ${n || 1} ${n === 1 || !n ? 'Änderung wartet' : 'Änderungen warten'}`;
+        if (this.saveState === 'saving' || this.saveState === 'pending') return 'Speichert …';
+        return this.lastSync ? 'Verbunden · zuletzt ' + this.lastSync.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : 'Verbunden';
+      },
+      saveStatus() {
+        return { idle: '', pending: 'Änderungen …', saving: 'Speichert …', saved: 'Gespeichert',
+          offline: 'Offline gespeichert. Wird synchronisiert, sobald du wieder online bist.',
+          error: 'Speichern fehlgeschlagen. Bitte versuch es gleich noch einmal.' }[this.saveState];
+      },
+
+      longDate: iso => fmt(iso, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+    };
+  }
+
+  if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+</script>
+</body>
+</html>

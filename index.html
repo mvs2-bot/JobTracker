@@ -293,6 +293,9 @@
     .msg { margin: 0 0 12px; padding: 10px 12px; border-radius: 10px; font-size: 13px; font-weight: 500; background: var(--danger-soft); color: var(--danger); }
     .msg.ok { background: var(--p1-soft); color: var(--p1); }
 
+    .load-gate { text-align: center; }
+    .load-gate .spin { margin-bottom: 14px; }
+    .load-gate .note { margin: 0 0 16px; font-size: 13px; }
     .spin { width: 18px; height: 18px; margin: 80px auto; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--mute); animation: spin .8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .fade-enter { animation: fade .3s ease both; }
@@ -529,7 +532,12 @@
 
 <div class="wrap">
 
-  <section x-show="view === 'loading'" aria-label="Wird geladen"><div class="spin"></div></section>
+  <!-- Start: sichtbar, bis Anmeldung oder App bereit ist. Meldung und Knopf setzt der Start-Wächter (auch ohne Alpine). -->
+  <section id="loadView" x-show="view === 'loading'" class="load-gate" aria-label="Wird geladen" aria-live="polite">
+    <div class="spin"></div>
+    <p id="loadMsg" class="note" hidden></p>
+    <button id="loadRetry" class="btn" type="button" hidden onclick="location.reload()">Neu laden</button>
+  </section>
 
   <!-- Login (Konten legt nur ein Admin an) -->
   <section x-show="view === 'auth'" x-cloak class="gate fade-enter">
@@ -908,7 +916,15 @@
   const fmt = (s, o) => new Intl.DateTimeFormat('de-DE', o).format(fromISO(s));
   const addDays = (iso, n) => { const d = fromISO(iso); d.setDate(d.getDate() + n); return toISO(d); };
   const dayDiff = (a, b) => Math.round((fromISO(b) - fromISO(a)) / 864e5);
-  const isOffline = e => !navigator.onLine || /fetch|network|load failed/i.test(String(e?.message || e));
+  const isOffline = e => !navigator.onLine || /fetch|network|load failed|timeout/i.test(String(e?.message || e));
+  // Netzanfragen nicht ewig warten lassen (schlechtes Netz, App aus dem Hintergrund)
+  const withTimeout = (p, ms) => Promise.race([p, new Promise((_, j) => setTimeout(() => j(new Error('timeout')), ms))]);
+  // Start-Meldung direkt im DOM setzen, damit sie auch erscheint, wenn Alpine hängt
+  function bootMsg(text, retry) {
+    const m = document.getElementById('loadMsg'), b = document.getElementById('loadRetry');
+    if (m) { m.textContent = text; m.hidden = false; }
+    if (b && retry) b.hidden = false;
+  }
   const pick = (o, keys) => Object.fromEntries(keys.filter(k => o[k] !== undefined).map(k => [k, o[k] === '' ? null : o[k]]));
   const hhmm = t => t ? String(t).slice(0, 5) : null;
 
@@ -961,7 +977,12 @@
       // Start
       // ------------------------------------------------------------
       async init() {
+        window.jtReady = true;
+        if (!window.supabase) { bootMsg('Der Job Tracker startet gerade nicht. Bitte neu laden.', true); return; }
         this.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Start-Wächter: nach 8 s Hinweis, nach 20 s „Neu laden“ anbieten, falls noch nichts zu sehen ist
+        setTimeout(() => { if (this.view === 'loading') bootMsg('Das dauert gerade länger als sonst …'); }, 8000);
+        setTimeout(() => { if (this.view === 'loading') bootMsg('Der Job Tracker startet gerade nicht. Bitte neu laden.', true); }, 20000);
         mq.addEventListener('change', e => this.wide = e.matches);
         // „Neu“ und „Profil“ gibt es nur am Handy: wird das Fenster breiter, zurück zur Übersicht
         mobileMq.addEventListener('change', e => { if (!e.matches && (this.tab === 'profile' || this.tab === 'new')) { this.newForm = null; this.go('home'); } });
@@ -980,9 +1001,11 @@
           }
         });
 
-        const { data: { session } } = await this.sb.auth.getSession();
+        let session = null, stuck = false;
+        try { ({ data: { session } } = await withTimeout(this.sb.auth.getSession(), 8000)); }
+        catch (e) { stuck = true; bootMsg('Der Job Tracker startet gerade nicht. Bitte neu laden.', true); console.error(e); }
         if (session && this.authMode !== 'recover') { this.user = session.user; await this.checkAccess(); }
-        else if (this.authMode !== 'recover') this.view = 'auth';
+        else if (this.authMode !== 'recover' && !stuck) this.view = 'auth';
 
         window.addEventListener('storage', e => {
           if (e.key !== 'overall-theme' || !e.newValue) return;
@@ -1044,7 +1067,8 @@
           try { Object.assign(this.me, JSON.parse(localStorage.getItem('jobtracker-me-' + this.user.id)) || {}); } catch (_) {}
           if (!isOffline(e)) console.error(e);
         });
-        const { data, error } = await this.sb.rpc('jobtracker_is_member');
+        let data = null, error = null;
+        try { ({ data, error } = await withTimeout(this.sb.rpc('jobtracker_is_member'), 10000)); } catch (e) { error = e; }
         let ok = data === true;
         // Offline: letzte bekannte Freischaltung verwenden, damit man auch ohne Netz arbeiten kann
         if (error) { if (isOffline(error)) { try { ok = localStorage.getItem(key) === '1'; } catch (_) {} } else console.error(error); }
@@ -1094,11 +1118,14 @@
       // ------------------------------------------------------------
       cacheKey() { return 'jobtracker-cache-' + this.user.id; },
       async loadAll() {
-        const [a, e, t] = await Promise.all([
-          this.sb.from('jobtracker_applications').select('*').order('updated_at', { ascending: false }).limit(2000),
-          this.sb.from('jobtracker_events').select('*').order('changed_on').order('created_at').limit(10000),
-          this.sb.from('jobtracker_tasks').select('*').order('due_date').limit(5000),
-        ]);
+        let a, e, t;
+        try {
+          [a, e, t] = await withTimeout(Promise.all([
+            this.sb.from('jobtracker_applications').select('*').order('updated_at', { ascending: false }).limit(2000),
+            this.sb.from('jobtracker_events').select('*').order('changed_on').order('created_at').limit(10000),
+            this.sb.from('jobtracker_tasks').select('*').order('due_date').limit(5000),
+          ]), 12000);
+        } catch (x) { a = e = t = { error: x }; }   // Zeitüberschreitung: wie offline, letzter Stand vom Gerät
         const err = a.error || e.error || t.error;
         if (err) {
           if (!isOffline(err)) console.error(err);
@@ -1402,6 +1429,8 @@
     };
   }
 
+  // Falls Alpine oder die App gar nicht startet (z. B. Bibliothek nicht geladen): nach 8 s „Neu laden“ anbieten
+  setTimeout(() => { if (!window.jtReady) bootMsg('Der Job Tracker startet gerade nicht. Bitte neu laden.', true); }, 8000);
   if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 </script>
 </body>

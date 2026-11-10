@@ -30,7 +30,7 @@
        Systemschrift, weiße Karten auf Grau, Linien-Symbole, iOS-Segmente.
        Akzent Petrol, Status: grau (Merken/Zurückgezogen), Akzent (laufend), Grün (Angebot/Zusage), Rot (Absage). */
     :root {
-      --bg: #f2f2f7; --card: #fff; --well: #f2f2f7; --hover: #e9e9ef; --line: #e2e2e7; --sep: rgba(60, 60, 67, .14);
+      --add-tint: 16%; --bg: #f2f2f7; --card: #fff; --well: #f2f2f7; --hover: #e9e9ef; --line: #e2e2e7; --sep: rgba(60, 60, 67, .14);
       --ink: #1c1c1e; --text: #3a3a3c; --mute: #6c6c70;
       --p1: #0b6e79; --p1-soft: #e3f2f4; --on-p1: #fff;
       --ok: #248a3d; --ok-soft: #e4f4e8; --warn: #b25000; --warn-soft: #fdf0e3; --danger: #d70015; --danger-soft: #ffe6e8;
@@ -42,7 +42,7 @@
       color-scheme: light;
     }
     .dark {
-      color-scheme: dark; --bg: #000; --card: #1c1c1e; --well: #2c2c2e; --hover: #3a3a3c; --line: #38383a; --sep: rgba(84, 84, 88, .55);
+      color-scheme: dark; --add-tint: 26%; --bg: #000; --card: #1c1c1e; --well: #2c2c2e; --hover: #3a3a3c; --line: #38383a; --sep: rgba(84, 84, 88, .55);
       --ink: #f5f5f7; --text: #d1d1d6; --mute: #98989f;
       --p1: #5cc8d4; --p1-soft: #0f2a2e; --on-p1: #062a2f;
       --ok: #30d158; --ok-soft: #12291a; --warn: #ffb340; --warn-soft: #33240b; --danger: #ff6961; --danger-soft: #3a1412;
@@ -376,8 +376,11 @@
       body.has-bar > .wrap { padding-bottom: calc(58px + 28px + env(safe-area-inset-bottom, 0px)); }
       .detail.float { padding-bottom: calc(58px + 28px + env(safe-area-inset-bottom, 0px)); }
       /* Neue Bewerbung mit leicht getöntem Hintergrund: hier kommt etwas Neues dazu */
-      body.adding, body.adding header { background: color-mix(in srgb, var(--p1) 16%, var(--bg)); }
-      body.adding header { background: color-mix(in srgb, color-mix(in srgb, var(--p1) 16%, var(--bg)) 82%, transparent); }
+      body.adding, body.adding header { background: color-mix(in srgb, var(--p1) var(--add-tint), var(--bg)); }
+      body.adding header { background: color-mix(in srgb, color-mix(in srgb, var(--p1) var(--add-tint), var(--bg)) 82%, transparent); }
+      /* Formular-Karte zusätzlich mit feinem Petrol-Rand, damit sie auch im Dunkeln klar als „neu“ erkennbar ist.
+         outline statt box-shadow: --shadow ist im Dunkelmodus „none“. */
+      body.adding .new-card { outline: 1.5px solid color-mix(in srgb, var(--p1) 55%, transparent); outline-offset: -1.5px; }
     }
     @media (prefers-reduced-transparency: reduce) { .tabbar { background: var(--card); -webkit-backdrop-filter: none; backdrop-filter: none; } }
 
@@ -792,7 +795,7 @@
       <template x-if="tab === 'new' && newForm">
         <form class="new-page" @submit.prevent="createApp()">
           <h2>Neue Bewerbung</h2>
-          <div class="card" style="padding:12px">
+          <div class="card new-card" style="padding:12px">
             <div class="form">
               <label class="f"><span>Firma</span><input x-model="newForm.company" required maxlength="200"></label>
               <label class="f"><span>Stelle</span><input x-model="newForm.position" required maxlength="200"></label>

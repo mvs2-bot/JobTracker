@@ -3,7 +3,7 @@
    - Bibliotheken: aus dem Speicher
    - Supabase-Anfragen werden NICHT gespeichert (Bewerbungen bleiben privat).
      Offline-Änderungen hält die App selbst zurück und schickt sie nach, sobald wieder Netz da ist. */
-const P="jobtracker-",V=P+"v4";
+const P="jobtracker-",V=P+"v5";
 const CORE=['./','index.html','shared/ios-nav.js','manifest.json','icon.svg','icon.png','apple-touch-icon.png','icons/icon-192.png','icons/icon-512.png','icons/icon-maskable-512.png','icons/favicon-32.png'];
 const EXTRA=["https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js","https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"];
 const CDN=/cdn\.jsdelivr\.net/;

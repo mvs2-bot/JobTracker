@@ -126,6 +126,7 @@
     .stack { display: grid; gap: 14px; }
     .link { display: inline-block; padding: 2px 0; border: 0; background: none; font-size: 13px; font-weight: 600; color: var(--p1); text-decoration: none; }
     .link:hover { text-decoration: underline; text-underline-offset: 3px; }
+    .sec-head .link { padding: 12px; margin: -12px; }   /* „Alle“: größere Trefferfläche */
     .empty { padding: 28px 16px; text-align: center; font-size: 13px; color: var(--mute); }
     .empty .btn { margin-top: 12px; }
     .group-label { margin: 16px 4px 8px; font-size: 13px; font-weight: 600; color: var(--mute); }
@@ -163,23 +164,29 @@
     .tag.s-no { background: var(--danger-soft); color: var(--danger); }
 
     /* Werkzeugleiste der Liste */
-    .tools { display: grid; gap: 10px; margin-bottom: 12px; }
+    .tools { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin-bottom: 8px; }
     .search { display: flex; align-items: center; gap: 8px; padding: 0 12px; min-height: 40px; border-radius: 10px; background: color-mix(in srgb, var(--mute) 12%, transparent); color: var(--mute); }
     .search input { flex: 1; min-width: 0; border: 0; background: none; outline: none; font-size: 16px; color: var(--ink); padding: 8px 0; }
-    .chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
+    .tools-top { display: flex; align-items: center; gap: 8px; }
+    .tools-top .search { flex: 1; min-width: 0; }
+    .arch { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 12px; border: 0; border-radius: 10px;
+      background: color-mix(in srgb, var(--mute) 12%, transparent); color: var(--ink); font-size: 13px; font-weight: 500; }
+    .arch .ic { width: 17px; height: 17px; }
+    .arch[aria-pressed="true"] { background: var(--p1-soft); color: var(--p1); font-weight: 600; }
+    /* Chips laufen seitlich weiter: weicher Rand zeigt, dass es mehr gibt */
+    .chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px 6px;
+      -webkit-mask-image: linear-gradient(to right, transparent, #000 14px, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, transparent, #000 14px, #000 calc(100% - 28px), transparent); }
     .chips::-webkit-scrollbar { display: none; }
     .chip { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 6px 12px; border: 0; border-radius: 999px; background: var(--card); box-shadow: var(--shadow); color: var(--ink);
       font-size: 13px; font-weight: 500; transition: background .15s, color .15s; }
     .chip:hover { background: var(--hover); }
     .chip[aria-pressed="true"] { background: var(--p1); color: var(--on-p1); font-weight: 600; }
     .chip small { font-size: 11px; opacity: .7; }
-    .tools-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--mute); cursor: pointer; }
-    .toggle input { width: 18px; height: 18px; accent-color: var(--p1); margin: 0; }
-    .seg.view-mode { display: none; }
+    .seg.view-mode { display: none; flex: none; }
+    .seg.view-mode button { padding-inline: 10px; }
 
     /* Spaltenansicht (nur Desktop) */
-    .board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(220px, 1fr); gap: 14px; overflow-x: auto; padding-bottom: 8px; align-items: start; }
+    .board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(150px, 1fr); gap: 14px; overflow-x: auto; padding-bottom: 8px; align-items: start; }
     .col { background: color-mix(in srgb, var(--mute) 9%, transparent); border-radius: var(--radius); padding: 10px; display: grid; gap: 8px; }
     .col h4 { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: var(--mute); padding: 2px 6px; }
     .bcard { display: grid; gap: 4px; padding: 12px; border: 0; border-radius: var(--radius-s); background: var(--card); box-shadow: var(--shadow); text-align: left; color: var(--text); }
@@ -202,7 +209,12 @@
     .d-head .position { width: 100%; border: 0; background: none; outline: none; font-size: 16px; font-weight: 500; color: var(--text); padding: 2px 0 0; }
     .d-head input::placeholder { color: color-mix(in srgb, var(--mute) 60%, transparent); }
     .d-head .need { margin-top: 6px; font-size: 12px; color: var(--warn); }
-    .status-pick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+    .status-now { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 14px; }
+    .status-now .tag.cur { gap: 4px; min-height: 32px; padding: 4px 10px 4px 12px; border: 0; font-size: 13px; }
+    .status-now .tag.cur .ic { width: 15px; height: 15px; stroke-width: 2.2; transition: transform .15s; }
+    .status-now .tag.cur[aria-expanded="true"] .ic { transform: rotate(180deg); }
+    .btn .ic.next { width: 15px; height: 15px; }
+    .status-pick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
     .status-pick button { min-height: 34px; padding: 6px 12px; border: 0; border-radius: 999px; background: var(--well); color: var(--ink); font-size: 13px; font-weight: 500; }
     .status-pick button:hover { background: var(--hover); }
     .status-pick button[aria-pressed="true"] { background: var(--p1); color: var(--on-p1); font-weight: 600; }
@@ -231,15 +243,18 @@
     /* Fristen */
     .task { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 0; }
     .task + .task { border-top: 1px solid var(--sep); }
-    .check { flex: none; width: 26px; height: 26px; border: 0; border-radius: 50%; box-shadow: inset 0 0 0 1.8px var(--line); background: none; display: grid; place-items: center; color: transparent; padding: 0; }
-    .check .ic { width: 15px; height: 15px; stroke-width: 2.6; }
-    .check[aria-pressed="true"] { background: var(--p1); box-shadow: none; color: var(--on-p1); }
+    /* Trefferfläche 44 px (Apple-Mindestmaß), sichtbarer Kreis 26 px; negativer Rand hält das Layout */
+    .check { position: relative; flex: none; width: 44px; height: 44px; margin: -9px; border: 0; border-radius: 50%; background: none; display: grid; place-items: center; color: transparent; padding: 0; }
+    .check::before { content: ""; position: absolute; inset: 9px; border-radius: 50%; box-shadow: inset 0 0 0 1.8px var(--line); }
+    .check .ic { position: relative; width: 15px; height: 15px; stroke-width: 2.6; }
+    .check[aria-pressed="true"] { color: var(--on-p1); }
+    .check[aria-pressed="true"]::before { background: var(--p1); box-shadow: none; }
     .task .txt { flex: 1; min-width: 0; }
     .task .t1 { display: block; font-size: 15px; color: var(--ink); overflow-wrap: anywhere; }
     .task.done .t1 { text-decoration: line-through; color: var(--mute); }
     .task .t2 { display: block; font-size: 12px; color: var(--mute); }
     .task .t2.late { color: var(--danger); font-weight: 600; } .task .t2.today { color: var(--warn); font-weight: 600; }
-    .x { flex: none; width: 32px; height: 32px; border: 0; border-radius: 50%; background: none; color: var(--mute); display: grid; place-items: center; padding: 0; }
+    .x { flex: none; width: 44px; height: 44px; margin: -6px; border: 0; border-radius: 50%; background: none; color: var(--mute); display: grid; place-items: center; padding: 0; }
     .x:hover { background: var(--hover); color: var(--danger); }
     .x .ic { width: 16px; height: 16px; }
     .add-task { display: grid; gap: 8px; margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--sep); }
@@ -302,8 +317,8 @@
     /* nur Deckkraft: ein transform würde die fixierte Detailansicht im Bereich einsperren */
     @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 
-    /* ---------------- Desktop ab 1024 px: eigenes Layout ---------------- */
-    @media (min-width: 1024px) {
+    /* ---------------- Desktop ab 900 px (auch Tablet quer): eigenes Layout ---------------- */
+    @media (min-width: 900px) {
       .wrap { max-width: 1200px; padding-inline: 32px; }
       .bar { gap: 16px; padding-block: 14px 12px; }
       .bar .logo { width: 40px; height: 40px; border-radius: 10px; }
@@ -317,15 +332,19 @@
       .stat { padding: 18px 20px; } .stat b { font-size: 30px; }
       .home { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
       .home .stats { grid-column: 1 / -1; }
-      .split { display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 24px; align-items: start; }
+      .split { display: grid; grid-template-columns: clamp(300px, 36%, 400px) minmax(0, 1fr); gap: 24px; align-items: start; }
       .split > .detail:not(.float) { position: sticky; top: 84px; max-height: calc(100vh - 100px); overflow-y: auto; border-radius: var(--radius); }
-      .chips { margin: 0; padding: 0; flex-wrap: wrap; }
       .seg.view-mode { display: inline-grid; }
+      .split .seg.view-mode span, .split .arch span { display: none; }
+      .split .arch { padding-inline: 11px; }
       .detail.float { left: auto; width: 560px; box-shadow: var(--pop); padding-inline: 24px; }
       .soon { max-width: 760px; }
       .modal-bg { align-items: center; }
       .modal { border-radius: 18px; padding: 22px; }
     }
+
+    /* Schmale geteilte Ansicht (Tablet quer): Firmen-Initiale weglassen, damit Namen Platz haben */
+    @media (min-width: 900px) and (max-width: 1099.98px) { .split .row .co { display: none; } }
 
     /* Dashboard-Kopf: Wochentag, Datum und Uhrzeit über der ersten Karte */
     .dash-head { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 0 4px; font-size: 15px; font-weight: 600; color: var(--ink); }
@@ -380,6 +399,16 @@
       /* Segmente oben, Plus, Mond und Profilbild im Kopf übernimmt die Leiste unten */
       .tabs, .acts .icon-btn.add, .acts .theme-btn, .acts .me { display: none !important; }
       main { padding-top: 12px; }
+      /* Großer Titel: Name des Bereichs statt Logo und App-Name */
+      body.has-bar .bar .logo, body.has-bar .bar .sub, .new-page h2 { display: none; }
+      body.has-bar h1 { font-size: 28px; letter-spacing: -.02em; }
+      /* Übersicht: Termine vor den Kennzahlen, Kennzahlen als wischbare Reihe */
+      .home .dash-head { order: 0; } .home .c-soon { order: 1; } .home .stats { order: 2; } .home .c-recent { order: 3; }
+      .home .stats { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; margin: 0 -16px; padding: 2px 16px 8px;
+        -webkit-mask-image: linear-gradient(to right, transparent, #000 14px, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, transparent, #000 14px, #000 calc(100% - 28px), transparent); }
+      .home .stats::-webkit-scrollbar { display: none; }
+      .home .stat { flex: 0 0 140px; scroll-snap-align: start; padding: 12px 14px; }
+      .home .stat b { font-size: 22px; }
       body.has-bar > .wrap { padding-bottom: calc(62px + 36px + env(safe-area-inset-bottom, 0px)); }
       .detail.float { padding-bottom: calc(62px + 36px + env(safe-area-inset-bottom, 0px)); }
       /* Neue Bewerbung mit leicht getöntem Hintergrund: hier kommt etwas Neues dazu */
@@ -421,6 +450,9 @@
     ext:   svg('<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>'),
     mail:  svg('<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m4 7 8 6 8-6"/>'),
     phone: svg('<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>'),
+    down:  svg('<path d="m6 9 6 6 6-6"/>'),
+    next:  svg('<path d="M5 12h14M13 6l6 6-6 6"/>'),
+    archive: svg('<rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v9.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V9M10 13h4"/>'),
     key:   svg('<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M15 8l2 2"/>'),
   };
 
@@ -474,7 +506,7 @@
   <div class="wrap bar">
     <img class="logo" src="icon.svg" alt="">
     <div class="head">
-      <h1>Job Tracker</h1>
+      <h1 x-text="mobile && view === 'app' ? tabTitle() : 'Job Tracker'">Job Tracker</h1>
       <div class="sub">Alle Bewerbungen an einem Ort</div>
     </div>
 
@@ -594,7 +626,7 @@
         <div class="card stat wide"><span>Ø Tage bis zur Antwort</span><b x-text="s.days"></b><p>ab Bewerbungsdatum</p></div>
       </div>
 
-      <div class="card">
+      <div class="card c-soon">
         <div class="sec-head"><h3>Nächste Termine</h3><button class="link" type="button" @click="go('soon')" x-show="openTasks().length">Alle</button></div>
         <template x-for="t in openTasks().slice(0, 3)" :key="t.id">
           <button type="button" class="row" style="padding-inline:0" @click="openApp(t.application_id)">
@@ -605,7 +637,7 @@
         <p class="empty" x-show="!openTasks().length">Keine offenen Fristen.</p>
       </div>
 
-      <div class="card">
+      <div class="card c-recent">
         <div class="sec-head"><h3>Zuletzt geändert</h3><button class="link" type="button" @click="go('apps')" x-show="apps.length">Alle</button></div>
         <template x-for="a in recent()" :key="a.id">
           <button type="button" class="row" style="padding-inline:0" @click="openApp(a.id)">
@@ -622,19 +654,19 @@
     <section x-show="tab === 'apps'" :class="{ split: wideList() }">
       <div>
         <div class="tools">
-          <label class="search"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
-            <input type="search" x-model="q" placeholder="Firma, Stelle oder Ort" aria-label="Suchen"></label>
+          <div class="tools-top">
+            <label class="search"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
+              <input type="search" x-model="q" placeholder="Firma, Stelle oder Ort" aria-label="Suchen"></label>
+            <button type="button" class="arch" :aria-pressed="showArchive" @click="showArchive = !showArchive" title="Archivierte Bewerbungen mit anzeigen" x-html="IC.archive + '<span>Archiv</span>'"></button>
+            <div class="seg view-mode" role="group" aria-label="Ansicht">
+              <button type="button" :aria-pressed="!board" @click="board = false; remember()" aria-label="Liste" title="Liste" x-html="IC.list + '<span>Liste</span>'"></button>
+              <button type="button" :aria-pressed="board" @click="board = true; remember()" aria-label="Spalten" title="Spalten" x-html="IC.board + '<span>Spalten</span>'"></button>
+            </div>
+          </div>
           <div class="chips" role="group" aria-label="Nach Status filtern">
             <template x-for="f in FILTERS" :key="f.id">
               <button class="chip" type="button" :aria-pressed="filter === f.id" @click="filter = f.id"><span x-text="f.label"></span><small x-text="countFor(f)"></small></button>
             </template>
-          </div>
-          <div class="tools-row">
-            <label class="toggle"><input type="checkbox" x-model="showArchive"> Archiv zeigen</label>
-            <div class="seg view-mode" aria-label="Ansicht">
-              <button type="button" :aria-pressed="!board" @click="board = false; remember()" x-html="IC.list + 'Liste'"></button>
-              <button type="button" :aria-pressed="board" @click="board = true; remember()" x-html="IC.board + 'Spalten'"></button>
-            </div>
           </div>
         </div>
 
@@ -679,9 +711,15 @@
               <input class="company" x-model="a.company" @input="queueSave(a)" placeholder="Firma" maxlength="200" aria-label="Firma">
               <input class="position" x-model="a.position" @input="queueSave(a)" placeholder="Stelle" maxlength="200" aria-label="Stelle">
               <p class="need" x-show="!valid(a)">Firma und Stelle sind Pflicht, sonst wird nicht gespeichert.</p>
-              <div class="status-pick" role="group" aria-label="Status">
+              <div class="status-now">
+                <button type="button" class="tag cur" x-show="!wide" :class="ST[a.status].kind" @click="statusOpen = !statusOpen" :aria-expanded="statusOpen" aria-controls="statusPick"
+                  :aria-label="'Status: ' + ST[a.status].label + ', ändern'" x-html="'<span>' + ST[a.status].label + '</span>' + IC.down"></button>
+                <button type="button" class="btn small" x-show="nextStatus(a)" @click="setStatus(a, nextStatus(a))" :aria-label="'Status weiter: ' + ST[nextStatus(a)]?.label"
+                  x-html="IC.next + (ST[nextStatus(a)]?.label || '')"></button>
+              </div>
+              <div id="statusPick" class="status-pick" role="group" aria-label="Status" x-show="wide || statusOpen">
                 <template x-for="s in STATUSES" :key="s.id">
-                  <button type="button" :class="s.kind" :aria-pressed="a.status === s.id" @click="setStatus(a, s.id)" x-text="s.label"></button>
+                  <button type="button" :class="s.kind" :aria-pressed="a.status === s.id" @click="setStatus(a, s.id); statusOpen = false" x-text="s.label"></button>
                 </template>
               </div>
             </div>
@@ -941,13 +979,15 @@
   }
 
   function jobTracker() {
-    const mq = matchMedia('(min-width: 1024px)');
+    const mq = matchMedia('(min-width: 900px)');   // gleiche Grenze wie das Desktop-CSS
     const mobileMq = matchMedia('(max-width: 767.98px)');
     return {
       sb: null,
       view: 'loading',            // loading | auth | noaccess | app
       dark: document.documentElement.classList.contains('dark'),
       wide: mq.matches,
+      mobile: mobileMq.matches,
+      statusOpen: false,          // Handy: alle Status in der Detailansicht aufgeklappt
       user: null,
       ACCOUNT_URL, ADMIN_URL, IC, STATUSES, ST, FILTERS, COLUMNS, MODES, KINDS, SOURCES,
       TABS: [{ id: 'home', label: 'Übersicht' }, { id: 'apps', label: 'Bewerbungen' }, { id: 'soon', label: 'Demnächst' }],
@@ -985,7 +1025,7 @@
         setTimeout(() => { if (this.view === 'loading') bootMsg('Der Job Tracker startet gerade nicht. Bitte neu laden.', true); }, 20000);
         mq.addEventListener('change', e => this.wide = e.matches);
         // „Neu“ und „Profil“ gibt es nur am Handy: wird das Fenster breiter, zurück zur Übersicht
-        mobileMq.addEventListener('change', e => { if (!e.matches && (this.tab === 'profile' || this.tab === 'new')) { this.newForm = null; this.go('home'); } });
+        mobileMq.addEventListener('change', e => { this.mobile = e.matches; if (!e.matches && (this.tab === 'profile' || this.tab === 'new')) { this.newForm = null; this.go('home'); } });
         // Neuladen behält die Seite, ein neuer Aufruf startet auf der Übersicht
         try { const t = sessionStorage.getItem('jobtracker-tab'); if (['home', 'apps', 'soon'].includes(t) || (mobileMq.matches && t === 'profile')) this.tab = t; } catch (_) {}
         const tickClock = () => { this.clock = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }); };
@@ -1251,6 +1291,8 @@
         this.openApp(a.id);
       },
 
+      // Nächster Schritt im Ablauf (Merken → … → Zusage); abgeschlossene haben keinen
+      nextStatus(a) { const i = STATUSES.findIndex(s => s.id === a.status); return i >= 0 && i < STATUSES.findIndex(s => s.id === 'accepted') ? STATUSES[i + 1].id : null; },
       setStatus(a, s) {
         if (a.status === s) return;
         a.status = s;
@@ -1299,12 +1341,13 @@
         this.tab = tab; this.sel = null; window.scrollTo({ top: 0 });
         try { sessionStorage.setItem('jobtracker-tab', tab === 'new' ? this.prevTab : tab); } catch (_) {}
       },
+      tabTitle() { return { home: 'Übersicht', apps: 'Bewerbungen', soon: 'Demnächst', new: 'Neue Bewerbung', profile: 'Profil' }[this.tab] || 'Job Tracker'; },
       wideList() { return this.wide && !this.board && this.tab === 'apps'; },
       openApp(id) {
         this.tab = 'apps';
         try { sessionStorage.setItem('jobtracker-tab', 'apps'); } catch (_) {}
         if (!this.wideList() && !this.sel) history.pushState({ d: 1 }, '');
-        this.sel = id;
+        this.sel = id; this.statusOpen = false;
         this.nt = { title: '', kind: 'deadline', due_date: '', due_time: '' };
         this.$nextTick(() => document.querySelector('.detail.float')?.scrollTo({ top: 0 }));
       },

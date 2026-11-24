@@ -190,7 +190,12 @@
     .col { background: color-mix(in srgb, var(--mute) 9%, transparent); border-radius: var(--radius); padding: 10px; display: grid; gap: 8px; }
     .col h4 { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: var(--mute); padding: 2px 6px; }
     .bcard { display: grid; gap: 4px; padding: 12px; border: 0; border-radius: var(--radius-s); background: var(--card); box-shadow: var(--shadow); text-align: left; color: var(--text); }
+    .bcard { cursor: grab; }
     .bcard:hover { background: var(--hover); }
+    .bcard.dragging { opacity: .45; }
+    .col { transition: box-shadow .12s, background .12s; }
+    .col.over { background: color-mix(in srgb, var(--p1) 12%, transparent); box-shadow: inset 0 0 0 2px var(--p1); }
+    .board-hint { margin: 0 0 10px; }
     .bcard b { font-size: 14px; color: var(--ink); }
     .bcard small { font-size: 12px; color: var(--mute); }
 
@@ -214,6 +219,18 @@
     .status-now .tag.cur .ic { width: 15px; height: 15px; stroke-width: 2.2; transition: transform .15s; }
     .status-now .tag.cur[aria-expanded="true"] .ic { transform: rotate(180deg); }
     .btn .ic.next { width: 15px; height: 15px; }
+    .quick { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .quick .btn { min-height: 36px; }
+    .quick .btn .ic { width: 15px; height: 15px; }
+    /* Einklappbare Kopfzeile (Handy); auf dem Desktop deaktiviert und wie normale Überschrift */
+    .sec-head.fold { width: 100%; border: 0; background: none; padding: 0; color: inherit; text-align: left; align-items: center; min-height: 28px; }
+    .sec-head.fold:disabled { cursor: default; color: inherit; }
+    .sec-head.fold h3 { flex: none; }
+    .sec-head.fold small { flex: 1; min-width: 0; margin: 0; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sec-head.fold > span { display: inline-grid; color: var(--mute); }
+    .sec-head.fold > span .ic { width: 18px; height: 18px; transition: transform .15s; }
+    .sec-head.fold[aria-expanded="true"] > span .ic { transform: rotate(180deg); }
+    .sec-head.fold[aria-expanded="false"] { margin-bottom: 0; }
     .status-pick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
     .status-pick button { min-height: 34px; padding: 6px 12px; border: 0; border-radius: 999px; background: var(--well); color: var(--ink); font-size: 13px; font-weight: 500; }
     .status-pick button:hover { background: var(--hover); }
@@ -274,6 +291,7 @@
     .ev .what { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: var(--ink); }
     .ev input[type="date"] { border: 0; border-radius: 8px; background: var(--well); color: var(--text); font-size: 14px; padding: 4px 8px; min-height: 32px; }
 
+    .d-foot .btn.ghost { background: var(--card); }   /* --well wäre auf dem grauen Grund unsichtbar */
     .d-foot { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; }
 
     /* Knöpfe */
@@ -333,6 +351,9 @@
       .home { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
       .home .stats { grid-column: 1 / -1; }
       .split { display: grid; grid-template-columns: clamp(300px, 36%, 400px) minmax(0, 1fr); gap: 24px; align-items: start; }
+      /* Detail zweispaltig, sobald die rechte Spalte breit genug ist (Container-Abfrage) */
+      .split > .detail:not(.float) { container-type: inline-size; }
+      .split .d-inner { max-width: none; }
       .split > .detail:not(.float) { position: sticky; top: 84px; max-height: calc(100vh - 100px); overflow-y: auto; border-radius: var(--radius); }
       .seg.view-mode { display: inline-grid; }
       .split .seg.view-mode span, .split .arch span { display: none; }
@@ -343,8 +364,30 @@
       .modal { border-radius: 18px; padding: 22px; }
     }
 
+    @container (min-width: 700px) {
+      .d-inner { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+      .d-inner > .c-full { grid-column: 1 / -1; }
+    }
+
     /* Schmale geteilte Ansicht (Tablet quer): Firmen-Initiale weglassen, damit Namen Platz haben */
     @media (min-width: 900px) and (max-width: 1099.98px) { .split .row .co { display: none; } }
+
+    /* Übersicht Desktop: Balken (eine Farbe, Wert als Text daneben, Abstand zwischen Balken) */
+    .bars { display: grid; gap: 2px; }
+    .bar-row { display: grid; grid-template-columns: 112px minmax(0, 1fr) 32px; align-items: center; gap: 12px; min-height: 36px; padding: 4px 8px; margin: 0 -8px;
+      border: 0; border-radius: 8px; background: none; text-align: left; color: var(--text); }
+    .bar-row:hover { background: var(--hover); }
+    .bar-row .bl { font-size: 13px; color: var(--text); }
+    .bar-row b { font-size: 14px; font-weight: 600; color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+    .track { height: 12px; border-radius: 4px; background: var(--well); overflow: hidden; }
+    .track .fill { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--p1); }
+    .cols7 { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; align-items: end; height: 150px; }
+    .c7 { display: grid; grid-template-rows: 18px 1fr 18px; justify-items: center; height: 100%; gap: 4px; }
+    .c7 b { font-size: 12px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .col7 { display: flex; align-items: flex-end; width: min(28px, 100%); border-radius: 4px; background: var(--well); }
+    .col7 .fill { display: block; width: 100%; border-radius: 4px 4px 0 0; background: var(--p1); }
+    .c7 small { font-size: 12px; color: var(--mute); }
+    .c7 small.now { color: var(--ink); font-weight: 600; }
 
     /* Dashboard-Kopf: Wochentag, Datum und Uhrzeit über der ersten Karte */
     .dash-head { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 0 4px; font-size: 15px; font-weight: 600; color: var(--ink); }
@@ -647,6 +690,35 @@
         </template>
         <div class="empty" x-show="!apps.length">Noch keine Bewerbung erfasst.<br><button class="btn" type="button" @click="openNew()">Erste Bewerbung erfassen</button></div>
       </div>
+
+      <!-- Desktop: Verteilung nach Status und Aktivität der letzten 7 Tage (eine Farbe, Werte als Text daneben) -->
+      <div class="card" x-show="wide && apps.length" x-data="{ get p() { return pipeline() } }">
+        <div class="sec-head"><h3>Pipeline</h3><button class="link" type="button" @click="board = true; remember(); go('apps')">Spalten</button></div>
+        <div class="bars" role="list">
+          <template x-for="c in p.cols" :key="c.label">
+            <button type="button" class="bar-row" role="listitem" @click="filter = c.filter; board = false; go('apps')" :title="c.label + ': ' + c.n + ' (' + c.pct + ' %)'">
+              <span class="bl" x-text="c.label"></span>
+              <span class="track"><span class="fill" :style="'width:' + (p.max ? c.n / p.max * 100 : 0) + '%'"></span></span>
+              <b x-text="c.n"></b>
+            </button>
+          </template>
+        </div>
+        <p class="note" x-text="'Ohne Archiv, ' + p.total + ' Bewerbungen'"></p>
+      </div>
+
+      <div class="card" x-show="wide && apps.length" x-data="{ get w() { return week() } }">
+        <div class="sec-head"><h3>Letzte 7 Tage</h3><small class="note" style="margin:0" x-text="w.total + (w.total === 1 ? ' Änderung' : ' Änderungen')"></small></div>
+        <div class="cols7" role="list" aria-label="Neu erfasst und Statuswechsel je Tag">
+          <template x-for="d in w.days" :key="d.iso">
+            <div class="c7" role="listitem" :title="d.long + ': ' + d.n + (d.n === 1 ? ' Änderung' : ' Änderungen')" :aria-label="d.long + ': ' + d.n">
+              <b x-text="d.n || ''"></b>
+              <span class="col7"><span class="fill" :style="'height:' + (w.max ? Math.max(d.n / w.max * 100, d.n ? 6 : 0) : 0) + '%'"></span></span>
+              <small :class="{ now: d.today }" x-text="d.short"></small>
+            </div>
+          </template>
+        </div>
+        <p class="note">Neu erfasste Bewerbungen und Statuswechsel je Tag.</p>
+      </div>
     </section>
 
     <!-- ---------------- Bewerbungen ---------------- -->
@@ -684,15 +756,23 @@
           <p class="empty" x-show="!filtered().length" x-text="apps.length ? 'Keine Treffer.' : 'Noch keine Bewerbung erfasst.'"></p>
         </div>
 
+        <p class="note board-hint" x-show="board && wide">Karten in eine andere Spalte ziehen ändert den Status. Mit der Tastatur: Karte wählen, dann Umschalt + ← / →.</p>
         <div class="board" x-show="board && wide">
           <template x-for="c in COLUMNS" :key="c.label">
-            <div class="col">
+            <div class="col" :class="{ over: dragOver === c.label }" role="group" :aria-label="c.label"
+              @dragover.prevent="if (dragId) dragOver = c.label" @dragleave="if (!$el.contains($event.relatedTarget)) dragOver = null"
+              @drop.prevent="dropOn(c); dragOver = null">
               <h4><span x-text="c.label"></span><span x-text="filtered().filter(a => c.ids.includes(a.status)).length"></span></h4>
               <template x-for="a in filtered().filter(a => c.ids.includes(a.status))" :key="a.id">
-                <button type="button" class="bcard" @click="openApp(a.id)">
+                <!-- div statt button: Firefox zieht Buttons nicht. Tastatur: Umschalt + ←/→ verschiebt in die Nachbarspalte -->
+                <div class="bcard" role="button" tabindex="0" draggable="true" :data-id="a.id" :class="{ dragging: dragId === a.id }"
+                  :aria-label="a.company + ', ' + ST[a.status].label + '. Umschalt und Pfeiltaste verschiebt die Spalte.'"
+                  @click="openApp(a.id)" @keydown.enter.prevent="openApp(a.id)" @keydown.space.prevent="openApp(a.id)"
+                  @keydown.shift.arrow-left.prevent="moveCol(a, -1)" @keydown.shift.arrow-right.prevent="moveCol(a, 1)"
+                  @dragstart="dragId = a.id; $event.dataTransfer.effectAllowed = 'move'; $event.dataTransfer.setData('text/plain', a.id)" @dragend="dragId = null; dragOver = null">
                   <b x-text="a.company"></b><small x-text="a.position"></small>
                   <span><span class="tag" :class="ST[a.status].kind" x-text="ST[a.status].short"></span></span>
-                </button>
+                </div>
               </template>
             </div>
           </template>
@@ -707,7 +787,7 @@
             <span class="st" x-text="saveStatus()"></span>
           </div>
           <div class="d-inner">
-            <div class="card d-head">
+            <div class="card d-head c-full">
               <input class="company" x-model="a.company" @input="queueSave(a)" placeholder="Firma" maxlength="200" aria-label="Firma">
               <input class="position" x-model="a.position" @input="queueSave(a)" placeholder="Stelle" maxlength="200" aria-label="Stelle">
               <p class="need" x-show="!valid(a)">Firma und Stelle sind Pflicht, sonst wird nicht gespeichert.</p>
@@ -716,6 +796,12 @@
                   :aria-label="'Status: ' + ST[a.status].label + ', ändern'" x-html="'<span>' + ST[a.status].label + '</span>' + IC.down"></button>
                 <button type="button" class="btn small" x-show="nextStatus(a)" @click="setStatus(a, nextStatus(a))" :aria-label="'Status weiter: ' + ST[nextStatus(a)]?.label"
                   x-html="IC.next + (ST[nextStatus(a)]?.label || '')"></button>
+              </div>
+              <div class="quick" x-show="isUrl(a.job_url) || a.contact_email || a.contact_phone || isUrl(a.portal_url)">
+                <a class="btn ghost small" x-show="isUrl(a.job_url)" :href="a.job_url" target="_blank" rel="noopener" x-html="IC.ext + 'Anzeige'"></a>
+                <a class="btn ghost small" x-show="a.contact_email" :href="'mailto:' + a.contact_email" x-html="IC.mail + 'Mail'"></a>
+                <a class="btn ghost small" x-show="a.contact_phone" :href="'tel:' + (a.contact_phone || '').replace(/[^\d+]/g, '')" x-html="IC.phone + 'Anrufen'"></a>
+                <a class="btn ghost small" x-show="isUrl(a.portal_url)" :href="a.portal_url" target="_blank" rel="noopener" x-html="IC.key + 'Portal'"></a>
               </div>
               <div id="statusPick" class="status-pick" role="group" aria-label="Status" x-show="wide || statusOpen">
                 <template x-for="s in STATUSES" :key="s.id">
@@ -775,8 +861,9 @@
             </div>
 
             <div class="card">
-              <div class="sec-head"><h3>Ansprechperson</h3></div>
-              <div class="form">
+              <button type="button" class="sec-head fold" @click="toggleFold('contact')" :aria-expanded="isOpen('contact')" :disabled="wide">
+                <h3>Ansprechperson</h3><small class="note" x-show="!isOpen('contact')" x-text="a.contact_name || a.contact_email || 'leer'"></small><span x-show="!wide" x-html="IC.down"></span></button>
+              <div class="form" x-show="isOpen('contact')">
                 <label class="f"><span>Name</span><input x-model="a.contact_name" @input="queueSave(a)" maxlength="200" autocomplete="off"></label>
                 <label class="f"><span>E-Mail</span><input type="email" x-model="a.contact_email" @input="queueSave(a)" maxlength="320" autocomplete="off" inputmode="email">
                   <a class="go" x-show="a.contact_email" :href="'mailto:' + a.contact_email" aria-label="E-Mail schreiben" x-html="IC.mail"></a></label>
@@ -786,20 +873,16 @@
             </div>
 
             <div class="card">
-              <div class="sec-head"><h3>Bewerberportal</h3></div>
+              <button type="button" class="sec-head fold" @click="toggleFold('portal')" :aria-expanded="isOpen('portal')" :disabled="wide">
+                <h3>Bewerberportal</h3><small class="note" x-show="!isOpen('portal')" x-text="a.portal_user || (isUrl(a.portal_url) ? 'Link gespeichert' : 'leer')"></small><span x-show="!wide" x-html="IC.down"></span></button>
+              <div x-show="isOpen('portal')">
               <div class="form">
                 <label class="f"><span>Portal</span><input type="url" x-model="a.portal_url" @input="queueSave(a)" maxlength="2000" placeholder="https://…" inputmode="url">
                   <a class="go" x-show="isUrl(a.portal_url)" :href="a.portal_url" target="_blank" rel="noopener" aria-label="Portal öffnen" x-html="IC.ext"></a></label>
                 <label class="f"><span>Benutzername</span><input x-model="a.portal_user" @input="queueSave(a)" maxlength="200" autocomplete="off"></label>
               </div>
               <p class="note"><span x-html="IC.key"></span> Das Passwort liegt im Passwort-Manager. Hier wird es bewusst nicht gespeichert.</p>
-            </div>
-
-            <div class="card">
-              <div class="sec-head"><h3>Stellenanzeige</h3><small class="note" style="margin:0" x-text="a._noPosting === true ? 'offline nicht geladen' : a.posting_text ? Math.round(a.posting_text.length / 100) / 10 + ' k Zeichen gesichert' : 'noch nicht gesichert'"></small></div>
-              <!-- === true: Alpine lässt disabled bei undefined gesetzt -->
-              <div class="area"><textarea class="field posting" rows="4" maxlength="100000" x-model="a.posting_text" x-effect="a.posting_text; grow($el)" @input="queueSave(a)" :disabled="a._noPosting === true"
-                placeholder="Text der Anzeige hier einfügen. Anzeigen gehen oft offline."></textarea></div>
+              </div>
             </div>
 
             <div class="card">
@@ -807,11 +890,19 @@
               <div class="area"><textarea class="field" rows="3" maxlength="10000" x-model="a.notes" x-effect="a.notes; grow($el)" @input="queueSave(a)" placeholder="Eindrücke, Fragen fürs Gespräch, Gehaltsrahmen …"></textarea></div>
             </div>
 
-            <div class="d-foot">
+            <div class="card c-full">
+              <button type="button" class="sec-head fold" @click="toggleFold('posting')" :aria-expanded="isOpen('posting')" :disabled="wide">
+                <h3>Stellenanzeige</h3><small class="note" style="margin:0" x-text="a._noPosting === true ? 'offline nicht geladen' : a.posting_text ? (a.posting_text.length < 1000 ? a.posting_text.length : (Math.round(a.posting_text.length / 100) / 10).toLocaleString('de-DE') + ' k') + ' Zeichen gesichert' : 'noch nicht gesichert'"></small><span x-show="!wide" x-html="IC.down"></span></button>
+              <!-- === true: Alpine lässt disabled bei undefined gesetzt -->
+              <div class="area" x-show="isOpen('posting')"><textarea class="field posting" rows="4" maxlength="100000" x-model="a.posting_text" x-effect="a.posting_text; grow($el)" @input="queueSave(a)" :disabled="a._noPosting === true"
+                placeholder="Text der Anzeige hier einfügen. Anzeigen gehen oft offline."></textarea></div>
+            </div>
+
+            <div class="d-foot c-full">
               <button class="btn ghost" type="button" @click="toggleArchive(a)" x-text="a.archived_at ? 'Aus dem Archiv holen' : 'Archivieren'"></button>
               <button class="btn red" type="button" @click="deleteApp(a)">Löschen</button>
             </div>
-            <p class="status" :class="{ err: saveState === 'error' }" x-text="saveStatus()"></p>
+            <p class="status c-full" :class="{ err: saveState === 'error' }" x-text="saveStatus()"></p>
           </div>
         </article>
       </template>
@@ -987,7 +1078,9 @@
       dark: document.documentElement.classList.contains('dark'),
       wide: mq.matches,
       mobile: mobileMq.matches,
-      statusOpen: false,          // Handy: alle Status in der Detailansicht aufgeklappt
+      statusOpen: false,
+      dragId: null, dragOver: null, // Spaltenansicht: gezogene Karte und Zielspalte
+      folds: {},                  // Handy: aufgeklappte Bereiche der Detailansicht (contact, portal, posting)          // Handy: alle Status in der Detailansicht aufgeklappt
       user: null,
       ACCOUNT_URL, ADMIN_URL, IC, STATUSES, ST, FILTERS, COLUMNS, MODES, KINDS, SOURCES,
       TABS: [{ id: 'home', label: 'Übersicht' }, { id: 'apps', label: 'Bewerbungen' }, { id: 'soon', label: 'Demnächst' }],
@@ -1031,6 +1124,7 @@
         const tickClock = () => { this.clock = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }); };
         tickClock(); setInterval(tickClock, 15000);
         try { this.board = localStorage.getItem('jobtracker-board') === '1'; } catch (_) {}
+        try { this.folds = JSON.parse(localStorage.getItem('jobtracker-folds') || '{}') || {}; } catch (_) {}
 
         this.sb.auth.onAuthStateChange((event, session) => {
           if (event === 'PASSWORD_RECOVERY') { this.user = session?.user ?? null; this.switchAuth('recover'); this.view = 'auth'; return; }
@@ -1074,6 +1168,12 @@
         this.dark = !this.dark;
         document.documentElement.classList.toggle('dark', this.dark);
         try { localStorage.setItem('overall-theme', this.dark ? 'dark' : 'light'); } catch (_) {}
+      },
+      // Detail am Handy: selten genutzte Bereiche eingeklappt (Zustand bleibt auf dem Gerät); Desktop immer offen
+      isOpen(k) { return this.wide || !!this.folds[k]; },
+      toggleFold(k) {
+        this.folds = { ...this.folds, [k]: !this.folds[k] };
+        try { localStorage.setItem('jobtracker-folds', JSON.stringify(this.folds)); } catch (_) {}
       },
       remember() { try { localStorage.setItem('jobtracker-board', this.board ? '1' : '0'); } catch (_) {} },
 
@@ -1293,6 +1393,17 @@
 
       // Nächster Schritt im Ablauf (Merken → … → Zusage); abgeschlossene haben keinen
       nextStatus(a) { const i = STATUSES.findIndex(s => s.id === a.status); return i >= 0 && i < STATUSES.findIndex(s => s.id === 'accepted') ? STATUSES[i + 1].id : null; },
+      // Spaltenansicht: Karte in eine Spalte legen = erster Status dieser Spalte (außer sie liegt schon dort)
+      dropOn(c) {
+        const a = this.apps.find(x => x.id === this.dragId); this.dragId = null;
+        if (a && !c.ids.includes(a.status)) this.setStatus(a, c.ids[0]);
+      },
+      moveCol(a, dir) {
+        const i = COLUMNS.findIndex(c => c.ids.includes(a.status)), c = COLUMNS[i + dir];
+        if (!c) return;
+        this.setStatus(a, c.ids[0]);
+        this.$nextTick(() => document.querySelector('.bcard[data-id="' + a.id + '"]')?.focus());
+      },
       setStatus(a, s) {
         if (a.status === s) return;
         a.status = s;
@@ -1400,6 +1511,20 @@
         return day + (t.due_time ? ', ' + hhmm(t.due_time) : '');
       },
 
+      // Übersicht Desktop: Anzahl je Spalte (ohne Archiv) und Aktivität der letzten 7 Tage
+      pipeline() {
+        const live = this.apps.filter(a => !a.archived_at), map = ['saved', 'run', 'talk', 'offer', 'closed'];
+        const cols = COLUMNS.map((c, i) => ({ label: c.label, filter: map[i], n: live.filter(a => c.ids.includes(a.status)).length }));
+        cols.forEach(c => c.pct = live.length ? Math.round(c.n / live.length * 100) : 0);
+        return { cols, total: live.length, max: Math.max(0, ...cols.map(c => c.n)) };
+      },
+      week() {
+        const t = this.today(), live = new Set(this.apps.map(a => a.id));
+        const days = [...Array(7)].map((_, i) => { const iso = addDays(t, i - 6);
+          return { iso, today: iso === t, short: fmt(iso, { weekday: 'short' }).replace('.', ''), long: fmt(iso, { weekday: 'long', day: 'numeric', month: 'long' }),
+            n: this.events.filter(e => e.changed_on === iso && live.has(e.application_id)).length }; });
+        return { days, total: days.reduce((x, d) => x + d.n, 0), max: Math.max(0, ...days.map(d => d.n)) };
+      },
       stats() {
         const all = this.apps, ev = id => this.eventsOf(id);
         const applied = all.filter(a => a.applied_on || ev(a.id).some(e => e.status !== 'saved'));

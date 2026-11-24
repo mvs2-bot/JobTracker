@@ -23,7 +23,11 @@ Live: https://mvs2-bot.github.io/JobTracker/
   die Kennzahlen darunter als wischbare Reihe.
 - **Bewerbungen:** Suche, Filter nach Status, Archiv ein/aus. In der Detailansicht bringt „→ nächster Status“
   die Bewerbung mit einem Tipp weiter (am Handy klappt der Status-Chip alle Status auf). Ab 900 px (Desktop, Tablet quer)
-  Liste links und Detail rechts oder Spaltenansicht nach Status.
+  Liste links und Detail rechts (bei genug Breite zweispaltig) oder Spaltenansicht nach Status;
+  Karten lassen sich per Drag & Drop (oder Umschalt + ←/→) in eine andere Spalte ziehen. Am Handy sind
+  Ansprechperson, Bewerberportal und Stellenanzeige einklappbar, oben gibt es Schnellknöpfe für Anzeige, Mail,
+  Anruf und Portal. Die Übersicht zeigt auf dem Desktop zusätzlich die Pipeline je Status und die Aktivität
+  der letzten 7 Tage.
 - **Demnächst:** alle offenen Fristen, gruppiert nach überfällig, heute, nächste 7 Tage, später.
 
 Eine Bewerbung hat Firma, Stelle, Status, Eckdaten (Ort, Arbeitsmodell, Datum, Quelle, Gehaltswunsch,

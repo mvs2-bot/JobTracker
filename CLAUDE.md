@@ -43,7 +43,8 @@ Abschnitte finden: `grep -n "// [A-Z]" index.html`, Methoden: `grep -n "^      \
 - Felder vor dem Senden mit `pick(row, APP_FIELDS|TASK_FIELDS|EVENT_FIELDS)` filtern (`''` → `null`).
   Neue Spalte = Migration in `supabase-core` **und** Eintrag in der passenden `*_FIELDS`-Liste.
 - Tippen speichert automatisch (`queueSave` mit Timer, `saveAllNow` beim Verlassen).
-- Offline-Start aus `jobtracker-cache-<uid>` (ohne Anzeigentexte), Profil aus `jobtracker-me-<uid>`, Board-Ansicht `jobtracker-board`.
+- Offline-Start aus `jobtracker-cache-<uid>` (ohne Anzeigentexte), Profil aus `jobtracker-me-<uid>`, Board-Ansicht `jobtracker-board`, eingeklappte Detail-Bereiche (Handy) `jobtracker-folds`.
+- Detail auf dem Desktop zweispaltig per Container-Abfrage (`@container`, ab 700 px Detailbreite); `.c-full` = volle Breite.
 - Status-Logik: `CLOSED`, `RUNNING`, `ANSWERS` (Eingangsbestätigung zählt nicht als Antwort). Definitionen der Kennzahlen in `README.md`.
 
 ## Supabase-Anbindung

@@ -19,8 +19,10 @@ Live: https://mvs2-bot.github.io/JobTracker/
 ## Bereiche
 
 - **Übersicht:** Kennzahlen (offen, Gespräche, Absagen, Antwortquote, Ø Tage bis zur Antwort),
-  die nächsten drei Termine und die zuletzt geänderten Bewerbungen.
-- **Bewerbungen:** Suche, Filter nach Status, Archiv ein/aus. Auf dem Desktop (ab 1024 px)
+  die nächsten drei Termine und die zuletzt geänderten Bewerbungen. Am Handy stehen die Termine oben,
+  die Kennzahlen darunter als wischbare Reihe.
+- **Bewerbungen:** Suche, Filter nach Status, Archiv ein/aus. In der Detailansicht bringt „→ nächster Status“
+  die Bewerbung mit einem Tipp weiter (am Handy klappt der Status-Chip alle Status auf). Ab 900 px (Desktop, Tablet quer)
   Liste links und Detail rechts oder Spaltenansicht nach Status.
 - **Demnächst:** alle offenen Fristen, gruppiert nach überfällig, heute, nächste 7 Tage, später.
 

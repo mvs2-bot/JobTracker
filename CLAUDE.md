@@ -7,7 +7,7 @@ Produktentscheidungen in `PRODUCT.md`, Nutzersicht in `README.md`.
 ## Arbeitsweise (Token-Effizienz)
 - `index.html` (~1440 Zeilen) nie komplett lesen. Per `grep -n` den Abschnitt anspringen (Karte unten).
 - Vor dem PR selbst prüfen: JS-Syntax, Alpine-Bindings ↔ Methoden/Felder, IDs, Tokens statt harter Farben,
-  Spalten ↔ Schema in `supabase-core`, Hell + Dunkel, Handy (< 768 px) + Desktop (≥ 1024 px).
+  Spalten ↔ Schema in `supabase-core`, Hell + Dunkel, Handy (< 768 px), Tablet hoch (768–899 px) + Desktop (≥ 900 px).
 - **Bei jeder Änderung `V=P+"vNN"` in `sw.js` hochzählen.** Neue Datei → in `CORE` von `sw.js` aufnehmen.
 - Bei Änderung an Architektur, Struktur oder Schema diese Datei im selben PR anpassen (max. 150 Zeilen).
 - Keine Secrets. Im Code ist nur der öffentliche Publishable Key erlaubt, niemals `service_role`/secret Key.
@@ -26,7 +26,7 @@ Produktentscheidungen in `PRODUCT.md`, Nutzersicht in `README.md`.
 | Zeilen ca. | Inhalt |
 | --- | --- |
 | 19–26 | Theme vor dem Rendern (`localStorage['overall-theme']` → Klasse `.dark` auf `<html>`), `grow()` für Textareas |
-| 28–395 | CSS: Tokens `:root`/`.dark`, Komponenten, `@media (min-width:1024px)` Desktop, `(max-width:767.98px)` Handy |
+| 28–395 | CSS: Tokens `:root`/`.dark`, Komponenten, `@media (min-width:900px)` Desktop (auch Tablet quer, JS `mq` gleich), `(max-width:767.98px)` Handy |
 | 404–468 | Konstanten: Supabase-Projekt, `APP_ID`, `IC` (SVG-Symbole), `STATUSES`, `FILTERS`, `COLUMNS`, `MODES`, `KINDS`, `SOURCES`, `*_FIELDS` |
 | 473–905 | Markup: Header, Gates (`loading`/`auth`/`noaccess`), Tabs `home`/`apps`/`soon`/`new`/`profile`, Tabbar |
 | 909–1435 | Logik: Datum-Helfer, `jobTracker()` mit Abschnitten Start, Anmeldung, Laden/Cache, Speichern/Warteschlange, Fristen, Navigation, Listen/Kennzahlen, Sync-Anzeige, Profil, CSV |
